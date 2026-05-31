@@ -194,6 +194,9 @@ func brainCmd() *cli.Command {
 						return err
 					}
 					target.Settings.Split = splitCSV(cmd.Args().Slice())
+					if target.Settings.Name == "" {
+						target.Settings.Name = target.Name
+					}
 					if err := target.SaveSettings(); err != nil {
 						return err
 					}
