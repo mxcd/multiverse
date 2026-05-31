@@ -1,0 +1,97 @@
+package brain
+
+import (
+	"path/filepath"
+	"regexp"
+	"strings"
+)
+
+var wikilinkRe = regexp.MustCompile(`\[\[([^\]\[]+)\]\]`)
+
+// extractLinks returns the target note names referenced by [[wikilinks]] in text,
+// stripping any |alias or #heading suffix.
+func extractLinks(text string) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, m := range wikilinkRe.FindAllStringSubmatch(text, -1) {
+		t := m[1]
+		if i := strings.IndexAny(t, "|#"); i >= 0 {
+			t = t[:i]
+		}
+		t = strings.TrimSpace(t)
+		if t != "" && !seen[t] {
+			seen[t] = true
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+// Links returns the outgoing wikilink targets of a note (by name).
+func (b *Brain) Links(rel string) ([]string, error) {
+	n, err := b.Load(rel)
+	if err != nil {
+		return nil, err
+	}
+	return extractLinks(n.Body), nil
+}
+
+// Backlinks returns the notes that link to the given note (by its base name).
+func (b *Brain) Backlinks(rel string) ([]string, error) {
+	target := strings.TrimSuffix(filepath.Base(rel), ".md")
+	notes, err := b.Notes()
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, other := range notes {
+		if other == rel {
+			continue
+		}
+		n, err := b.Load(other)
+		if err != nil {
+			return nil, err
+		}
+		for _, link := range extractLinks(n.Body) {
+			if strings.EqualFold(strings.TrimSuffix(link, ".md"), target) {
+				out = append(out, other)
+				break
+			}
+		}
+	}
+	return out, nil
+}
+
+// Orphans returns content notes that no other note links to — the link graph is
+// the index, so an unlinked content note is a navigation dead spot.
+func (b *Brain) Orphans() ([]string, error) {
+	notes, err := b.Notes()
+	if err != nil {
+		return nil, err
+	}
+	linked := map[string]bool{}
+	for _, rel := range notes {
+		n, err := b.Load(rel)
+		if err != nil {
+			return nil, err
+		}
+		for _, link := range extractLinks(n.Body) {
+			linked[strings.ToLower(strings.TrimSuffix(link, ".md"))] = true
+		}
+	}
+	var out []string
+	for _, rel := range notes {
+		n, err := b.Load(rel)
+		if err != nil {
+			return nil, err
+		}
+		if !b.IsContent(n) {
+			continue
+		}
+		base := strings.ToLower(strings.TrimSuffix(filepath.Base(rel), ".md"))
+		if !linked[base] {
+			out = append(out, rel)
+		}
+	}
+	return out, nil
+}

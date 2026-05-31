@@ -1,0 +1,59 @@
+version: 2
+
+project_name: multiverse
+
+before:
+  hooks:
+    - go test ./...
+
+builds:
+  - id: multi
+    main: ./cmd/multi
+    binary: multi
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: multi
+    name_template: "multi_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+
+release:
+  github:
+    owner: mxcd
+    name: multiverse
+  draft: false
+  prerelease: auto
+  name_template: "multi {{ .Tag }}"
