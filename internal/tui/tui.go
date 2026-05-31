@@ -468,7 +468,11 @@ func (m Model) writeScope() string {
 	if len(sources) == 0 && len(targets) == 0 {
 		return "select at least one source (space) before saving"
 	}
-	p, err := config.WriteBinding(m.cwd, config.Binding{Sources: sources, Targets: targets})
+	bnd := config.Binding{Sources: sources, Targets: targets}
+	if len(targets) == 0 && len(sources) > 0 {
+		bnd.ReadOnly = true // sources but no targets = read-only, not default-to-sources
+	}
+	p, err := config.WriteBinding(m.cwd, bnd)
 	if err != nil {
 		return "write failed: " + err.Error()
 	}

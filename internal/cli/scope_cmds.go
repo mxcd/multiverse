@@ -28,10 +28,7 @@ func useCmd() *cli.Command {
 			if len(refs) == 0 {
 				return errors.New("usage: multi use <brain> [brain...]")
 			}
-			bnd := config.Binding{Sources: refs}
-			if cmd.Bool("read-only") {
-				bnd.Targets = []string{}
-			}
+			bnd := config.Binding{Sources: refs, ReadOnly: cmd.Bool("read-only")}
 			return setBinding(bnd)
 		},
 	}
@@ -57,6 +54,7 @@ func scopeCmd() *cli.Command {
 				Flags: []cli.Flag{
 					&cli.StringSliceFlag{Name: "source", Aliases: []string{"s"}, Usage: "brain to read from (repeatable or comma-separated)"},
 					&cli.StringSliceFlag{Name: "target", Aliases: []string{"t"}, Usage: "brain to write to (repeatable or comma-separated)"},
+					&cli.BoolFlag{Name: "read-only", Usage: "bind sources only — no write targets"},
 				},
 				Action: func(_ context.Context, cmd *cli.Command) error {
 					src := splitCSV(cmd.StringSlice("source"))
@@ -64,7 +62,7 @@ func scopeCmd() *cli.Command {
 					if len(src) == 0 && len(tgt) == 0 {
 						return errors.New("pass --source and/or --target")
 					}
-					return setBinding(config.Binding{Sources: src, Targets: tgt})
+					return setBinding(config.Binding{Sources: src, Targets: tgt, ReadOnly: cmd.Bool("read-only")})
 				},
 			},
 			{
@@ -108,13 +106,12 @@ func setBinding(bnd config.Binding) error {
 	}
 	fmt.Printf("bound %s\n", p)
 	fmt.Printf("  sources: %s\n", strings.Join(bnd.Sources, ", "))
-	if len(bnd.Targets) == 0 {
-		if len(bnd.Sources) > 0 {
-			fmt.Printf("  targets: %s (default = sources)\n", strings.Join(bnd.Sources, ", "))
-		} else {
-			fmt.Println("  targets: (none — read-only)")
-		}
-	} else {
+	switch {
+	case bnd.ReadOnly:
+		fmt.Println("  targets: (none — read-only)")
+	case len(bnd.Targets) == 0:
+		fmt.Printf("  targets: %s (default = sources)\n", strings.Join(bnd.Sources, ", "))
+	default:
 		fmt.Printf("  targets: %s\n", strings.Join(bnd.Targets, ", "))
 	}
 	return nil

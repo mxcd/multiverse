@@ -82,16 +82,18 @@ func buildScope(cfg *config.Config, bnd *config.Binding, origin string) (*Scope,
 		}
 		s.Sources = append(s.Sources, sb)
 	}
-	targets := bnd.Targets
-	if len(targets) == 0 {
-		targets = bnd.Sources // default: what you can read, you can write
-	}
-	for _, ref := range targets {
-		sb, err := openRef(cfg, ref)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", origin, err)
+	if !bnd.ReadOnly {
+		targets := bnd.Targets
+		if len(targets) == 0 {
+			targets = bnd.Sources // default: what you can read, you can write
 		}
-		s.Targets = append(s.Targets, sb)
+		for _, ref := range targets {
+			sb, err := openRef(cfg, ref)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", origin, err)
+			}
+			s.Targets = append(s.Targets, sb)
+		}
 	}
 	return s, nil
 }

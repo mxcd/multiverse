@@ -27,6 +27,8 @@ func NewApp(version string) *cli.Command {
 		Commands: []*cli.Command{
 			// interactive control panel
 			tuiCmd(),
+			// agent / LLM usage guide
+			guideCmd(),
 			// onboarding & registry
 			onboardCmd(),
 			initCmd(),

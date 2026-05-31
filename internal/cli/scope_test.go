@@ -49,6 +49,24 @@ func TestTargetsDefaultToSources(t *testing.T) {
 	}
 }
 
+func TestReadOnlyBindingHasNoTargets(t *testing.T) {
+	a := mkBrain(t, "alpha")
+	// ReadOnly: sources only, no write target.
+	sc, err := buildScope(&config.Config{}, &config.Binding{Sources: []string{a}, ReadOnly: true}, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sc.Sources) != 1 {
+		t.Fatalf("expected 1 source, got %d", len(sc.Sources))
+	}
+	if len(sc.Targets) != 0 {
+		t.Fatalf("read-only scope must have no targets, got %d", len(sc.Targets))
+	}
+	if _, err := sc.writeTarget(); err == nil {
+		t.Fatal("writeTarget must error under a read-only scope")
+	}
+}
+
 func TestResolveNoteAcrossBrains(t *testing.T) {
 	a := mkBrain(t, "alpha")
 	b := mkBrain(t, "beta")

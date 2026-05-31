@@ -13,9 +13,14 @@ import (
 const BindingFile = ".multi.yaml"
 
 // Binding is the on-disk shape of a .multi.yaml.
+//
+// Target resolution: ReadOnly true means no write targets at all; otherwise an
+// empty Targets defaults to Sources (what you can read, you can write). This lets
+// "no targets" (read-only) be distinct from "targets omitted" (default).
 type Binding struct {
-	Sources []string `yaml:"sources"`
-	Targets []string `yaml:"targets,omitempty"`
+	Sources  []string `yaml:"sources"`
+	Targets  []string `yaml:"targets,omitempty"`
+	ReadOnly bool     `yaml:"read_only,omitempty"`
 }
 
 // FindBinding walks up from the cwd for the nearest binding file, returning its

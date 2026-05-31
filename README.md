@@ -64,6 +64,7 @@ The directory you work in declares which brains it **reads from** (sources) and
 ```bash
 cd ~/github.com/asolabs/qvm-website
 multi use qvm                       # read+write the qvm brain here and below
+multi use qvm --read-only           # read-only: no writes land here
 multi scope set --source qvm,deepthought --target qvm   # read both, write only qvm
 multi scope                         # show the resolved scope
 multi scope clear                   # remove ./.multi.yaml
@@ -74,6 +75,7 @@ multi scope clear                   # remove ./.multi.yaml
 ```yaml
 sources: [qvm, deepthought]   # read commands span all of these
 targets: [qvm]                # writes land here (first = default); omit → = sources
+read_only: true               # no write targets at all (overrides targets)
 ```
 
 With a scope active, **reads span every source** (results labeled by brain) and
@@ -93,6 +95,18 @@ multi sync                    # syncs every brain in scope
 Each command resolves its scope as: `--brain <name|path>` (one brain, overrides
 everything) → nearest `.multi.yaml` → the brain the cwd sits inside → the active
 brain in the registry.
+
+## For agents / LLMs
+
+`multi` is meant to be driven directly by shell-capable agents (Claude Code,
+Hermes) — no MCP server needed. To make one fluent in one shot:
+
+```bash
+multi guide              # compact mental model + cheatsheet (the read→write→sync loop)
+multi guide --claude-md  # emit a CLAUDE.md block to paste into a project repo
+```
+
+Errors are self-correcting (they say how to fix), and read commands take `--json`.
 
 ## The agent loop
 
