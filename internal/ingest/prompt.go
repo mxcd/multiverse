@@ -32,8 +32,12 @@ when nothing suitable exists.
 - Every brain command MUST be pinned: `+"`multi --brain %s …`"+` (the `+"`--brain`"+` flag goes
   BEFORE the subcommand). A bare `+"`multi`"+` targets the wrong (active) brain.
 - NEVER use the `+"`obsidian`"+` CLI and never touch ~/Nextcloud/DeepThought.
-- All structured writes go through `+"`multi --brain %s write/append`"+`. For surgical edits
-  of an existing note, edit the file under the brain dir directly, then let multi commit.
+- Create EVERY new note with `+"`multi --brain %s write`"+` — it generates the canonical front
+  matter and refuses without a summary. NEVER hand-write a new-note file with your own front
+  matter: the brain uses TOP-LEVEL type / status / tags / summary / source, NOT Claude's memory
+  schema (name / description / metadata:). Always pass --source and --freshness so lint stays clean.
+- Extend an existing note with `+"`multi --brain %s append`"+`, or edit its file under the brain
+  dir directly ONLY to change the BODY — never the front matter — then let multi commit.
 
 ## Already integrated THIS session — continue, don't duplicate
 %s
@@ -52,7 +56,8 @@ making a new one.
    - Add bidirectional `+"`[[wikilinks]]`"+`: link the note to its neighbours AND update
      neighbours to link back.
    - Maintain the relevant `+"`Atlas/*-MOC.md`"+` map membership.
-   - Only `+"`multi --brain %s write`"+` a NEW note when nothing fits (summary required).
+   - Create any genuinely new note with `+"`multi --brain %s write`"+` (never a hand-written
+     file — see Brain safety); pass --summary (required), --source, --freshness.
 5. Be conservative with rewrites — improve, don't vandalise. Everything is git-tracked,
    but aim for net-positive edits only.
 
@@ -80,12 +85,12 @@ Use `+"`multi --brain %s sync`"+` as your final step to push. Write the report L
 
 %s
 `,
-		BrainName, BrainName,
+		BrainName, BrainName, BrainName, // brain-safety: pin + write + append
 		prior.String(),
-		BrainName, BrainName,
-		BrainName,
+		BrainName, BrainName, // step 3: list + search
+		BrainName,            // step 4: write
 		reportPath,
-		BrainName,
+		BrainName, // sync line
 		digest,
 	)
 }
