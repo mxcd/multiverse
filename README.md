@@ -160,13 +160,85 @@ Markdown lives in git. **Large binaries (PDFs, images, archives) do not** — th
 bloat every clone forever. Keep them in object storage and link them (see a
 brain's `.gitignore`). Object-storage attachment handling is a planned follow-up.
 
+## Ingester — automatic session-end integration (`ingester`)
+
+A companion binary that runs on Claude Code's **Stop** hook and weaves each session's
+learnings into a brain — **extending and cross-linking existing notes** instead of
+dumping standalone files. It keeps a per-session **ledger** (transcript cursor + the
+notes touched so far) so repeated Stop firings *continue* one integration rather than
+duplicating, and it does the actual editing by steering a dedicated, **subscription-
+backed** interactive Claude session over tmux (so it never spends Agent-SDK / API
+credit).
+
+Flow: `Stop → ingester hook` (enqueue + kick the dispatcher, returns instantly) →
+detached `ingester dispatch` (single-flight via `flock`) computes the transcript delta,
+steers the tmux session to integrate it through `multi --brain <brain>`, waits for a
+sentinel report, updates the ledger, then `multi sync`s. A job that stalls times out
+into a dead-letter queue — nothing is lost and the host session never blocks.
+
+```
+ingester hook       # Stop-hook entry: reads hook JSON on stdin (fast, non-blocking)
+ingester dispatch   # detached worker; drains the queue (one integration per session)
+ingester run --session <id> --transcript <path>   # one cycle in the foreground (debug)
+ingester status     # queue, tmux session, ledgers
+ingester session ensure | kill                     # manage the tmux session
+```
+
+### Local install (LLM-friendly runbook)
+
+Prerequisites: `go` ≥ 1.26, `tmux`, the `multi` binary, a registered **target brain**
+(`multi brain list` shows it), and `claude` (Claude Code) logged in on a subscription.
+
+1. **Build & install both binaries** (ingester ships alongside multi):
+   ```bash
+   cd <multiverse-repo>
+   just install            # → $GOBIN/multi and $GOBIN/ingester  (e.g. ~/go/bin)
+   ```
+2. **Choose the target brain.** The ingester writes to the brain named `deep-thought`
+   by default — see `const BrainName` in `internal/ingest/brain.go`. To target another,
+   change that constant and re-run `just install`. Confirm it resolves:
+   ```bash
+   multi brain list        # the target brain must be registered
+   ingester status         # prints the home dir, a (down) session, and 0 jobs
+   ```
+3. **Wire the Stop hook.** Add this object to the `Stop` array in
+   `~/.claude/settings.json` (keep any existing entries; use an absolute path):
+   ```json
+   { "type": "command", "command": "/ABSOLUTE/PATH/TO/ingester hook", "timeout": 10 }
+   ```
+4. **Recursion guard — already built in, nothing to do.** The steered session is
+   launched with `DEEPTHOUGHT_INGEST=1` and a hooks-disabled settings file, and
+   `ingester hook` no-ops whenever that variable is set, so ingestion can never trigger
+   itself.
+5. **Verify steering** without a real integration:
+   ```bash
+   ingester session ensure              # launches the tmux Claude session (subscription)
+   tmux attach -t deepthought-ingest     # watch it; Ctrl-b then d to detach
+   ingester session kill
+   ```
+6. **Full dry-run** on a throwaway transcript (a trivial one should report
+   "nothing worth keeping"):
+   ```bash
+   ingester run --session test --transcript <some-session>.jsonl
+   cat ~/.claude/ingester/reports/*_test.md     # ends with:  INGEST-STATUS: done
+   cat ~/.claude/ingester/state/test.json        # the ledger
+   ```
+
+Data lives under `~/.claude/ingester/` (override via `INGESTER_HOME`): `state/` ledgers ·
+`queue/`(+`done`,`failed`) jobs · `reports/` sentinels · `prompts/` per-job instructions ·
+`dispatch.log`. Model: **Sonnet** (interactive = subscription quota). To disable, remove
+the Stop-hook entry — any queued jobs are inert without it.
+
 ## Layout
 
 ```
-cmd/multi            entrypoint
+cmd/multi            multi entrypoint
+cmd/ingester         ingester entrypoint (session-end integration)
 internal/brain       Brain, Note/front matter, index/search, graph, lint, git, scaffold
 internal/cli         urfave/cli v3 command tree
 internal/config      ~/.config/multi registry of brains
+internal/ingest      ingester: ledger, transcript delta, tmux steering, dispatcher
+internal/tui         Bubble Tea control panel
 ```
 
 ## Roadmap (deferred from v1)

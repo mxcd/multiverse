@@ -1,12 +1,15 @@
 binary := "multi"
+ldflags := "-X main.version=$(git describe --tags --always --dirty 2>/dev/null || echo dev)"
 
-# build the multi binary into ./bin
+# build both binaries into ./bin
 build:
-    go build -ldflags "-X main.version=$(git describe --tags --always --dirty 2>/dev/null || echo dev)" -o bin/{{binary}} ./cmd/multi
+    go build -ldflags "{{ldflags}}" -o bin/{{binary}} ./cmd/multi
+    go build -ldflags "{{ldflags}}" -o bin/ingester ./cmd/ingester
 
-# install multi into GOBIN / GOPATH/bin
+# install both binaries into GOBIN / GOPATH/bin
 install:
     go install ./cmd/multi
+    go install ./cmd/ingester
 
 # run go vet and tests
 check:
