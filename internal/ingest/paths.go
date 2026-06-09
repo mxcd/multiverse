@@ -44,7 +44,7 @@ func ensureDirs() error {
 
 // writeRunnerSettings writes a hooks-disabled settings file for the steered Claude
 // session, so its own Stop event cannot re-trigger ingestion (belt-and-suspenders on
-// top of the DEEPTHOUGHT_INGEST env guard).
+// top of the MULTI_INGEST env guard).
 func writeRunnerSettings() error {
 	if err := ensureDirs(); err != nil {
 		return err

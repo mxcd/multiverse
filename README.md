@@ -45,7 +45,7 @@ A Bubble Tea control panel with three tabbed views:
 
 ```bash
 multi onboard                                   # interactive: new or clone
-multi init ~/vaults/mybrain --name mybrain --split domain,operations
+multi init ~/vaults/mybrain --name mybrain --split topics,projects
 multi clone git@host:me/brain.git ~/vaults/brain
 multi brain list            # registered brains (* = active)
 multi brain use mybrain     # set active brain
@@ -62,10 +62,10 @@ The directory you work in declares which brains it **reads from** (sources) and
 **writes to** (targets) via a `.multi.yaml`, walked up the tree like `.git`:
 
 ```bash
-cd ~/github.com/asolabs/qvm-website
-multi use qvm                       # read+write the qvm brain here and below
-multi use qvm --read-only           # read-only: no writes land here
-multi scope set --source qvm,deepthought --target qvm   # read both, write only qvm
+cd ~/projects/my-project
+multi use work                      # read+write the work brain here and below
+multi use work --read-only          # read-only: no writes land here
+multi scope set --source work,personal --target work   # read both, write only work
 multi scope                         # show the resolved scope
 multi scope clear                   # remove ./.multi.yaml
 ```
@@ -73,20 +73,20 @@ multi scope clear                   # remove ./.multi.yaml
 `.multi.yaml`:
 
 ```yaml
-sources: [qvm, deepthought]   # read commands span all of these
-targets: [qvm]                # writes land here (first = default); omit → = sources
-read_only: true               # no write targets at all (overrides targets)
+sources: [work, personal]   # read commands span all of these
+targets: [work]             # writes land here (first = default); omit → = sources
+read_only: true             # no write targets at all (overrides targets)
 ```
 
 With a scope active, **reads span every source** (results labeled by brain) and
 **writes go to the target**:
 
 ```bash
-multi list                    # notes from qvm AND deepthought, brain-labeled
-multi search "iso 17024"      # searches all sources
-multi read deepthought:Home   # brain:note qualifier when a name exists in several
-multi write --title ... --summary ...   # lands in qvm (the target)
-multi write -b deepthought --title ...  # override target for one write
+multi list                    # notes from work AND personal, brain-labeled
+multi search "onboarding"     # searches all sources
+multi read personal:Home      # brain:note qualifier when a name exists in several
+multi write --title ... --summary ...   # lands in work (the target)
+multi write -b personal --title ...     # override target for one write
 multi sync                    # syncs every brain in scope
 ```
 
@@ -98,8 +98,8 @@ brain in the registry.
 
 ## For agents / LLMs
 
-`multi` is meant to be driven directly by shell-capable agents (Claude Code,
-Hermes) — no MCP server needed. To make one fluent in one shot:
+`multi` is meant to be driven directly by shell-capable agents (e.g. Claude Code)
+— no MCP server needed. To make one fluent in one shot:
 
 ```bash
 multi guide              # compact mental model + cheatsheet (the read→write→sync loop)
@@ -113,19 +113,19 @@ Errors are self-correcting (they say how to fix), and read commands take `--json
 ```bash
 # read — summary first, body only on confirmed relevance
 multi list                          # index: every note + its summary
-multi summary "QVM Overview"        # one note's summary
-multi fm "QVM Overview"             # full front-matter block
-multi search "iso 17024" [--body]   # match path/summary/tags (+ bodies)
-multi find --type reference --tag domain --status active
-multi read "QVM Overview"           # the deliberate full read
+multi summary "Project Overview"    # one note's summary
+multi fm "Project Overview"         # full front-matter block
+multi search "onboarding" [--body]  # match path/summary/tags (+ bodies)
+multi find --type reference --tag projects --status active
+multi read "Project Overview"       # the deliberate full read
 multi links / backlinks "..." / orphans
 
 # write — structured + auto-committed
-multi write --title "Mediation Basics" --dir domain \
-  --summary "what mediation is and why QVM certifies it" \
-  --tags domain,mediation --source "..." --freshness "current" \
+multi write --title "Deployment Runbook" --dir projects \
+  --summary "how to deploy the service and roll back" \
+  --tags projects,deployment --source "..." --freshness "current" \
   --body "..."                      # or --stdin
-multi append "Mediation Basics" --content "addendum"   # or --stdin
+multi append "Deployment Runbook" --content "addendum"   # or --stdin
 
 # transport & integrity
 multi sync [-m "msg"]               # commit local → pull --rebase → push
@@ -194,7 +194,7 @@ Prerequisites: `go` ≥ 1.26, `tmux`, the `multi` binary, a registered **target 
    cd <multiverse-repo>
    just install            # → $GOBIN/multi and $GOBIN/ingester  (e.g. ~/go/bin)
    ```
-2. **Choose the target brain.** The ingester writes to the brain named `deep-thought`
+2. **Choose the target brain.** The ingester writes to the brain named `second-brain`
    by default — see `const BrainName` in `internal/ingest/brain.go`. To target another,
    change that constant and re-run `just install`. Confirm it resolves:
    ```bash
@@ -207,13 +207,13 @@ Prerequisites: `go` ≥ 1.26, `tmux`, the `multi` binary, a registered **target 
    { "type": "command", "command": "/ABSOLUTE/PATH/TO/ingester hook", "timeout": 10 }
    ```
 4. **Recursion guard — already built in, nothing to do.** The steered session is
-   launched with `DEEPTHOUGHT_INGEST=1` and a hooks-disabled settings file, and
+   launched with `MULTI_INGEST=1` and a hooks-disabled settings file, and
    `ingester hook` no-ops whenever that variable is set, so ingestion can never trigger
    itself.
 5. **Verify steering** without a real integration:
    ```bash
    ingester session ensure              # launches the tmux Claude session (subscription)
-   tmux attach -t deepthought-ingest     # watch it; Ctrl-b then d to detach
+   tmux attach -t multi-ingest          # watch it; Ctrl-b then d to detach
    ingester session kill
    ```
 6. **Full dry-run** on a throwaway transcript (a trivial one should report

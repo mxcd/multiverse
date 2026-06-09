@@ -10,11 +10,11 @@ import (
 )
 
 // SessionName is the dedicated tmux session that hosts the steered Claude agent.
-const SessionName = "deepthought-ingest"
+const SessionName = "multi-ingest"
 
 // EnsureSession makes sure the dedicated tmux session is alive with an interactive
-// Claude (Sonnet, subscription quota) running in the deep-thought brain dir. It is
-// recursion-guarded (DEEPTHOUGHT_INGEST=1) and runs with hooks disabled so its own
+// Claude (Sonnet, subscription quota) running in the target brain's dir. It is
+// recursion-guarded (MULTI_INGEST=1) and runs with hooks disabled so its own
 // Stop event cannot re-trigger ingestion. A dead session is recreated.
 func EnsureSession() error {
 	if _, err := exec.LookPath("tmux"); err != nil {
@@ -36,7 +36,7 @@ func EnsureSession() error {
 		"-s", SessionName,
 		"-x", "220", "-y", "50",
 		"-c", brainDir,
-		"-e", "DEEPTHOUGHT_INGEST=1",
+		"-e", "MULTI_INGEST=1",
 		"sh", "-c", launch)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("tmux new-session: %v: %s", err, out)
@@ -61,7 +61,7 @@ func SteerJob(promptPath string) error {
 		return err
 	}
 	time.Sleep(1500 * time.Millisecond)
-	instr := fmt.Sprintf("Execute the DeepThought ingestion job described in @%s — follow it exactly, and finish by writing the report file it specifies.", promptPath)
+	instr := fmt.Sprintf("Execute the brain ingestion job described in @%s — follow it exactly, and finish by writing the report file it specifies.", promptPath)
 	return submitPrompt(instr)
 }
 

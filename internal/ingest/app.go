@@ -12,7 +12,7 @@ import (
 func NewApp(version string) *cli.Command {
 	return &cli.Command{
 		Name:    "ingester",
-		Usage:   "steer an interactive Claude session to weave session learnings into the deep-thought brain",
+		Usage:   "steer an interactive Claude session to weave session learnings into a target brain",
 		Version: version,
 		Description: "ingester runs on Claude Code's Stop hook. It keeps a per-session ledger\n" +
 			"(transcript cursor + notes touched so far) and steers a dedicated, subscription-\n" +

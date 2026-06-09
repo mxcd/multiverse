@@ -62,7 +62,7 @@ WRITE CONTRACT (enforced)
 
 AGENT TIPS
 - Add --json to list / search / find for structured output.
-- A note that exists in several brains: qualify it, e.g. ` + "`multi read qvm:\"Home\"`" + `.
+- A note that exists in several brains: qualify it, e.g. ` + "`multi read personal:\"Home\"`" + `.
 - One fact per file: write small, append-friendly notes; never co-edit a shared note.
 - "no brain in scope" → run ` + "`multi use <brain>`" + ` here, or pass --brain <name>.
 `

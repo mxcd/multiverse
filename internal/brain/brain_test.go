@@ -25,31 +25,31 @@ func TestWriteRequiresSummary(t *testing.T) {
 func TestWriteThenLoadRoundTrip(t *testing.T) {
 	b := newBrain(t)
 	rel, err := b.Write(WriteParams{
-		Title:     "Mediation Basics",
+		Title:     "Service Basics",
 		Dir:       "domain",
-		Summary:   "what mediation is: with a colon",
-		Tags:      []string{"domain", "mediation"},
+		Summary:   "what the service is: with a colon",
+		Tags:      []string{"domain", "service"},
 		Source:    "manual",
 		Freshness: "current",
-		Body:      "See [[The QVM Standard]].",
+		Body:      "See [[The Style Guide]].",
 	})
 	if err != nil {
 		t.Fatalf("write: %v", err)
 	}
-	if rel != "domain/Mediation Basics.md" {
+	if rel != "domain/Service Basics.md" {
 		t.Fatalf("unexpected path %q", rel)
 	}
 	n, err := b.Load(rel)
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
-	if n.FM.Summary != "what mediation is: with a colon" {
+	if n.FM.Summary != "what the service is: with a colon" {
 		t.Errorf("summary round-trip failed: %q", n.FM.Summary)
 	}
 	if n.FM.Created == "" || n.FM.Retrieved == "" {
 		t.Errorf("dates not auto-filled: %+v", n.FM)
 	}
-	if got := strings.Join(n.FM.Tags, ","); got != "domain,mediation" {
+	if got := strings.Join(n.FM.Tags, ","); got != "domain,service" {
 		t.Errorf("tags round-trip failed: %q", got)
 	}
 }

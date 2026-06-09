@@ -10,9 +10,9 @@ import (
 )
 
 // BrainName is the registry name of the brain this ingester targets.
-const BrainName = "deep-thought"
+const BrainName = "second-brain"
 
-// BrainDir resolves the deep-thought brain's on-disk path from the multi registry.
+// BrainDir resolves the target brain's on-disk path from the multi registry.
 func BrainDir() (string, error) {
 	cfg, err := config.Load()
 	if err != nil {
@@ -34,7 +34,7 @@ func multiPath() string {
 	return filepath.Join(home, "go", "bin", "multi")
 }
 
-// SyncBrain commits/pulls/pushes the deep-thought brain via multi — a backstop in
+// SyncBrain commits/pulls/pushes the target brain via multi — a backstop in
 // case the steered agent forgot to sync.
 func SyncBrain() error {
 	return exec.Command(multiPath(), "--brain", BrainName, "sync").Run()

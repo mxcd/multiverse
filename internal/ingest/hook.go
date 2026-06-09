@@ -12,9 +12,9 @@ import (
 // stdin, applies cheap guards, enqueues a job, and spawns the dispatcher detached —
 // then returns immediately so the user's session never blocks on ingestion.
 func RunHook() error {
-	// Recursion guard: the steered ingestion session runs with DEEPTHOUGHT_INGEST=1,
+	// Recursion guard: the steered ingestion session runs with MULTI_INGEST=1,
 	// so its own Stop event must be a no-op.
-	if os.Getenv("DEEPTHOUGHT_INGEST") != "" {
+	if os.Getenv("MULTI_INGEST") != "" {
 		return nil
 	}
 	data, err := io.ReadAll(os.Stdin)

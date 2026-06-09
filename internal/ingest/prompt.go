@@ -20,10 +20,10 @@ func BuildJobPrompt(j Job, l *Ledger, digest, reportPath string) string {
 		}
 	}
 
-	return fmt.Sprintf(`# DeepThought ingestion job
+	return fmt.Sprintf(`# Brain ingestion job
 
 You are integrating the learnings of a just-finished Claude Code session into the
-**deep-thought** brain. This is NOT "evaluate, then drop a new file somewhere." Your
+target brain. This is NOT "evaluate, then drop a new file somewhere." Your
 job is to weave durable knowledge into the EXISTING note graph: extend related notes,
 add bidirectional wikilinks, keep MOC/Atlas maps current, and create a new note only
 when nothing suitable exists.
@@ -31,7 +31,7 @@ when nothing suitable exists.
 ## Brain safety (non-negotiable)
 - Every brain command MUST be pinned: `+"`multi --brain %s …`"+` (the `+"`--brain`"+` flag goes
   BEFORE the subcommand). A bare `+"`multi`"+` targets the wrong (active) brain.
-- NEVER use the `+"`obsidian`"+` CLI and never touch ~/Nextcloud/DeepThought.
+- NEVER bypass `+"`multi`"+` to edit the brain (no direct git, no other note app) — `+"`multi`"+` owns all writes and commits.
 - Create EVERY new note with `+"`multi --brain %s write`"+` — it generates the canonical front
   matter and refuses without a summary. NEVER hand-write a new-note file with your own front
   matter: the brain uses TOP-LEVEL type / status / tags / summary / source, NOT Claude's memory

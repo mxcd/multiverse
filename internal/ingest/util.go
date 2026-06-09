@@ -1,6 +1,6 @@
 // Package ingest steers an interactive Claude Code session (on the user's
 // subscription, via tmux) to integrate the learnings of a finished Claude session
-// into the deep-thought brain — weaving them into the existing note graph rather
+// into a target brain — weaving them into the existing note graph rather
 // than appending standalone files. It is the orchestration layer: ledger, queue,
 // tmux lifecycle, steering, completion detection. The actual graph-aware editing is
 // done by the steered agent through the `multi` CLI.
