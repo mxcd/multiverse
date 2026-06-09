@@ -56,6 +56,11 @@ multi brain use mybrain     # set active brain
 binaries out of git, and a `.gitattributes` with `*.md merge=union` — then
 `git init`s with an initial commit.
 
+> **Recommended layout:** keep every brain in one place — a `~/vaults/`
+> directory in your home dir (`~/vaults/<brain>` per brain). It keeps paths
+> predictable, makes backups/sync trivial, and matches the examples throughout
+> this README.
+
 ## Per-directory scope (multiple brains)
 
 The directory you work in declares which brains it **reads from** (sources) and

@@ -1,0 +1,144 @@
+# multiverse — `multi`
+
+> A git-backed markdown **second brain** for agents and humans. `multi` is the
+> storage-layer CLI: it hides git transport behind `read` / `write` / `search`
+> so an agent never thinks about sync, and it enforces the conventions that keep
+> a knowledge base navigable — above all, **every note has a one-line summary**.
+
+`multi` is meant to be driven directly by shell-capable agents (e.g. Claude
+Code) — no MCP server needed. If you are an LLM with shell access, the single
+most useful thing you can do is run `multi guide` (a compact, always-current
+mental model + cheatsheet) and `multi guide --claude-md` (a CLAUDE.md block to
+paste into a project repo). This file is a static fallback for when you cannot
+run the binary yet.
+
+## Concepts
+
+- **Brain** — a directory of markdown notes under git. Every note carries YAML
+  front matter; its one-line `summary` is the gate: judge relevance by the
+  summary before reading a body.
+- **Markdown is the source of truth.** Plain `.md` in a git repo — no database,
+  readable and editable anywhere (an editor, `grep`, Obsidian).
+- **Git is the transport.** The agent calls `read`/`write`/`search`; `multi`
+  does pull/commit/push underneath. You never run `git` inside a brain yourself.
+- **Scope.** The directory you work in is bound (via `./.multi.yaml`, walked up
+  the tree like `.git`) to SOURCES (brains you read) and TARGETS (brains you
+  write). Reads span all sources; writes land in a target.
+- **Resolution order** (per command): `--brain <name|path>` overrides everything
+  → nearest `./.multi.yaml` → the brain the cwd sits inside → the active brain
+  in the registry. The `--brain` flag goes BEFORE the subcommand, like git.
+
+## Install
+
+Prerequisites: `go` ≥ 1.26 (and `just` if you use the recipes below).
+
+```bash
+just install          # go install ./cmd/multi and ./cmd/ingester → $GOBIN (e.g. ~/go/bin)
+# or
+just build            # → ./bin/multi
+```
+
+Make sure `$GOBIN` (commonly `~/go/bin`) is on your `PATH` so `multi` resolves.
+
+## Recommended layout
+
+Keep every brain under a single `~/vaults/` directory in your home dir, one
+subdirectory per brain (`~/vaults/<brain>`). It keeps paths predictable, makes
+backup/sync trivial, and matches the examples in the docs.
+
+## Getting started
+
+```bash
+multi onboard                                          # interactive: new or clone
+multi init ~/vaults/mybrain --name mybrain --split topics,projects
+multi clone git@host:me/brain.git ~/vaults/brain       # adopt an existing brain repo
+multi brain list                                       # registered brains (* = active)
+multi brain use mybrain                                # set the active brain
+```
+
+`init` scaffolds governance docs, `Templates/`, a `.gitignore` (keeps large
+binaries out of git), and `.gitattributes` with `*.md merge=union`, then runs
+`git init` with an initial commit.
+
+## The agent loop
+
+```bash
+# read — summary first, body only on confirmed relevance
+multi list                          # index: every note + its summary (all sources)
+multi summary "<note>"              # one note's one-line gate
+multi fm "<note>"                   # full front-matter block
+multi search "<query>" [--body]     # match path/summary/tags (+ bodies)
+multi find --type reference --tag <tag> --status active
+multi read "<note>"                 # the deliberate full body read
+multi backlinks "<note>" · multi links "<note>" · multi orphans
+
+# write — structured + auto-committed (--summary is REQUIRED, one line about contents)
+multi write --title "<title>" --dir <dir> \
+  --summary "<one line>" --tags <tag> --source "<where>" --freshness "<currency>" \
+  --body "<md>"                     # or --stdin
+multi append "<note>" --content "<md>"   # or --stdin
+
+# transport & integrity (multi runs git for you)
+multi sync [-m "msg"]               # commit local → pull --rebase → push every brain in scope
+multi status
+multi lint [--summary|--tags|--fresh] [--json]
+```
+
+Most read commands accept `--json` for machine consumption. Errors are
+self-correcting — they tell you how to fix them.
+
+## Front-matter contract (enforced by `multi write` / checked by `multi lint`)
+
+```yaml
+type: reference        # moc | reference | decision | hub | meta  (default reference)
+status: active         # active | draft | deprecated
+tags: [<split>, ...]   # content notes carry one split tag + topic tags
+created: <YYYY-MM-DD>   # auto-filled
+summary: One-line description — the gate readers read first  (REQUIRED)
+source: ...            # provenance
+retrieved: <YYYY-MM-DD># auto-filled
+freshness: ...         # one-line currency/trust note
+```
+
+Standing rules: every note has a `summary`; every *content* note carries one
+split tag and records `source`/`retrieved`/`freshness`; hubs and the
+`[[wikilink]]` graph are the index, not folders. One fact per file; never
+co-edit a shared note.
+
+## Multiple brains (per-directory scope)
+
+```bash
+cd ~/projects/my-project
+multi use work                                          # read+write the work brain here and below
+multi use work --read-only                              # read-only: no writes land here
+multi scope set --source work,personal --target work    # read both, write only work
+multi scope                                             # show the resolved scope
+```
+
+`./.multi.yaml`:
+
+```yaml
+sources: [work, personal]   # read commands span all of these
+targets: [work]             # writes land here (first = default); omit → = sources
+read_only: true             # no write targets at all (overrides targets)
+```
+
+With a scope active, reads span every source (results labeled by brain) and
+writes go to the target. Qualify a note that exists in several brains as
+`brain:note`, e.g. `multi read personal:"Home"`.
+
+## Optional: session-end ingester
+
+`ingester` is a companion binary that runs on Claude Code's Stop hook and weaves
+each session's learnings into a brain — extending and cross-linking existing
+notes rather than dumping standalone files. It steers a dedicated,
+subscription-backed interactive Claude session over tmux. The default target
+brain is `second-brain` (`const BrainName` in `internal/ingest/brain.go`); the
+recursion guard is the `MULTI_INGEST=1` env var; the tmux session is named
+`multi-ingest`. See the README's "Ingester" section for the install runbook.
+
+## Pointers
+
+- `README.md` — full documentation, TUI control panel, ingester runbook, layout.
+- `multi guide` — the canonical, always-current agent cheatsheet (run it).
+- `cmd/multi`, `cmd/ingester` — entrypoints. `internal/` — implementation.
