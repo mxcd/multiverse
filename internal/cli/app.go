@@ -54,6 +54,7 @@ func NewApp(version string) *cli.Command {
 			syncCmd(),
 			statusCmd(),
 			lintCmd(),
+			fixCmd(),
 		},
 	}
 }

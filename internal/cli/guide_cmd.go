@@ -52,13 +52,17 @@ CORE LOOP
            multi append "<note>" --content "<md>"
   graph    multi backlinks "<note>" · multi links "<note>" · multi orphans
   sync     multi sync                       commit + pull + push every brain in scope
-  check    multi lint                       verify summary / split tag / freshness
+  check    multi lint                       verify summary / split tag / freshness / kebab-case names
+  fix      multi fix                        rename files+dirs to kebab-case & rewrite links (--dry-run)
 
 WRITE CONTRACT (enforced)
 - --summary is REQUIRED: one line, about the note's contents (not its title).
 - type: moc|reference|decision|hub|meta (default reference); status: active|draft|deprecated.
 - Content notes should carry their split tag plus source/retrieved/freshness; ` + "`multi lint`" + ` checks.
 - created/retrieved are auto-filled; every write auto-commits.
+- Filenames are forced to kebab-case (lowercase-with-hyphens) for cross-platform safety:
+  --title "Formula Student" lands at .../formula-student.md, while the in-note H1 stays human.
+  Reference notes by name in any case ("Formula Student" or "formula-student") — both resolve.
 
 AGENT TIPS
 - Add --json to list / search / find for structured output.

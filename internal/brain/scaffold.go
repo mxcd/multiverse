@@ -63,7 +63,7 @@ func scaffoldFiles(s Settings) map[string]string {
 		splitRule = fmt.Sprintf("- **One split.** Every content note carries exactly one of the split tags `%s`, and lives under the matching top-level directory.\n", strings.Join(s.Split, "`, `"))
 		var rows strings.Builder
 		for _, half := range s.Split {
-			rows.WriteString(fmt.Sprintf("| `%s` | `%s/` | `%s` |\n", half, half, half))
+			rows.WriteString(fmt.Sprintf("| `%s` | `%s/` | `%s` |\n", half, Slugify(half), half))
 		}
 		splitTable = "| Half | Directory | Tag |\n|------|-----------|-----|\n" + rows.String()
 	} else {
@@ -80,18 +80,18 @@ func scaffoldFiles(s Settings) map[string]string {
 	)
 
 	files := map[string]string{
-		"README.md":                 tplREADME,
-		"read.md":                   tplRead,
-		"write.md":                  tplWrite,
-		"Conventions.md":            tplConventions,
-		"Code of Conduct.md":        tplCodeOfConduct,
-		"Home.md":                   tplHome,
-		"Templates/Reference Note.md": tplReference,
-		"Templates/Decision Record.md": tplDecision,
-		"Templates/Hub Note.md":     tplHub,
-		"Templates/Map of Content.md": tplMOC,
-		".gitignore":                tplGitignore,
-		".gitattributes":            tplGitattributes,
+		"readme.md":                    tplREADME,
+		"read.md":                      tplRead,
+		"write.md":                     tplWrite,
+		"conventions.md":               tplConventions,
+		"code-of-conduct.md":           tplCodeOfConduct,
+		"home.md":                      tplHome,
+		"templates/reference-note.md":  tplReference,
+		"templates/decision-record.md": tplDecision,
+		"templates/hub-note.md":        tplHub,
+		"templates/map-of-content.md":  tplMOC,
+		".gitignore":                   tplGitignore,
+		".gitattributes":               tplGitattributes,
 	}
 	for k, v := range files {
 		files[k] = repl.Replace(v)
@@ -141,8 +141,8 @@ multi lint                 # verify the standing rules hold
 
 ## Table of contents
 
-- [[Home]] — the dashboard / top Map of Content
-- [[Conventions]] · [[Code of Conduct]] · [[read]] · [[write]]
+- [[home]] — the dashboard / top Map of Content
+- [[conventions]] · [[code-of-conduct]] · [[read]] · [[write]]
 `
 
 const tplRead = `---
@@ -167,7 +167,7 @@ to decide whether a note is relevant. Read the full note only after its summary 
 
 ## The reading loop
 
-1. **Orient.** Start at [[README]] → [[Home]], then follow ` + "`[[wikilinks]]`" + ` to narrow down.
+1. **Orient.** Start at [[readme]] → [[home]], then follow ` + "`[[wikilinks]]`" + ` to narrow down.
 2. **Scan summaries, not bodies:**
    - everything at once: ` + "`multi list`" + `
    - one note: ` + "`multi summary \"<note>\"`" + `
@@ -178,7 +178,7 @@ to decide whether a note is relevant. Read the full note only after its summary 
 
 ## Related
 
-- [[README]] · [[write]] · [[Conventions]] · [[Home]]
+- [[readme]] · [[write]] · [[conventions]] · [[home]]
 `
 
 const tplWrite = `---
@@ -229,7 +229,7 @@ multi lint        # summary on every note; split tag + freshness on every conten
 
 ## Related
 
-- [[Code of Conduct]] · [[README]] · [[read]] · [[Conventions]] · [[Home]]
+- [[code-of-conduct]] · [[readme]] · [[read]] · [[conventions]] · [[home]]
 `
 
 const tplConventions = `---
@@ -290,7 +290,7 @@ summary: The mandatory rules for the {{NAME}} brain — summary, split, freshnes
 
 # Code of Conduct
 
-The non-negotiable rules. Details live in [[Conventions]]; protocols in [[read]] and [[write]].
+The non-negotiable rules. Details live in [[conventions]]; protocols in [[read]] and [[write]].
 
 1. **Summary.** Every note has a single-line ` + "`summary`" + ` in front matter.
 2. **Split.** Every content note is tagged with exactly one split tag ({{SPLIT_TAGS}}).
@@ -313,7 +313,7 @@ The top-level Map of Content. Start here and follow ` + "`[[wikilinks]]`" + ` ou
 
 ## Governance
 
-- [[README]] · [[read]] · [[write]] · [[Conventions]] · [[Code of Conduct]]
+- [[readme]] · [[read]] · [[write]] · [[conventions]] · [[code-of-conduct]]
 
 ## Areas
 

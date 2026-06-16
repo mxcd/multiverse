@@ -26,10 +26,13 @@ type LintOptions struct {
 	Summary bool // every note carries a one-line summary
 	Tags    bool // every content note carries exactly one split tag
 	Fresh   bool // every content note records source + retrieved + freshness
+	Kebab   bool // every file and directory name is kebab-case
 }
 
 // AllRules enables every rule.
-func AllRules() LintOptions { return LintOptions{Summary: true, Tags: true, Fresh: true} }
+func AllRules() LintOptions {
+	return LintOptions{Summary: true, Tags: true, Fresh: true, Kebab: true}
+}
 
 // Lint runs the selected standing-rule checks across the brain.
 func (b *Brain) Lint(opts LintOptions) (LintReport, error) {
@@ -44,6 +47,12 @@ func (b *Brain) Lint(opts LintOptions) (LintReport, error) {
 			return rep, err
 		}
 		content := b.IsContent(n)
+
+		if opts.Kebab {
+			if seg, ok := IsKebabPath(rel); !ok {
+				rep.add(rel, "kebab", fmt.Sprintf("non-kebab-case name %q (run `multi fix`)", seg))
+			}
+		}
 
 		if opts.Summary {
 			if !n.HasFM {

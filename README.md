@@ -135,7 +135,8 @@ multi append "Deployment Runbook" --content "addendum"   # or --stdin
 # transport & integrity
 multi sync [-m "msg"]               # commit local → pull --rebase → push
 multi status
-multi lint [--summary|--tags|--fresh] [--json]
+multi lint [--summary|--tags|--fresh|--kebab] [--json]
+multi fix [--dry-run] [--keep-display]   # rename files+dirs to kebab-case & rewrite links
 ```
 
 Most read commands accept `--json` for machine consumption.
@@ -158,6 +159,15 @@ freshness: ...         # one-line currency/trust note
 **Standing rules** (enforced by `multi lint`): every note has a `summary`; every
 *content* note carries one split tag and records `source`/`retrieved`/`freshness`;
 hubs and the `[[wikilink]]` graph are the index, not folders.
+
+**File names are kebab-case.** Every file and directory name is forced to
+lowercase-with-hyphens (`projects/deployment-runbook.md`) so brains stay portable
+across case-insensitive filesystems (Windows, macOS) and safe to type unquoted.
+`multi write` slugs the path automatically while keeping the in-note `# H1` title
+human-readable, and you can still reference a note by any casing. To migrate an
+existing brain, `multi fix` renames every file and directory and rewrites every
+`[[wikilink]]` to match (`--dry-run` to preview, `--keep-display` to preserve a
+link's rendered text as `[[slug|Old Name]]`).
 
 ## Large files
 

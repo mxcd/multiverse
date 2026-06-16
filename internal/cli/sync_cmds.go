@@ -69,6 +69,7 @@ func lintCmd() *cli.Command {
 			&cli.BoolFlag{Name: "summary", Usage: "only the summary rule"},
 			&cli.BoolFlag{Name: "tags", Usage: "only the split-tag rule"},
 			&cli.BoolFlag{Name: "fresh", Usage: "only the freshness rule"},
+			&cli.BoolFlag{Name: "kebab", Usage: "only the kebab-case name rule"},
 			&cli.BoolFlag{Name: "json"},
 		),
 		Action: func(_ context.Context, cmd *cli.Command) error {
@@ -80,8 +81,9 @@ func lintCmd() *cli.Command {
 				Summary: cmd.Bool("summary"),
 				Tags:    cmd.Bool("tags"),
 				Fresh:   cmd.Bool("fresh"),
+				Kebab:   cmd.Bool("kebab"),
 			}
-			if !opts.Summary && !opts.Tags && !opts.Fresh {
+			if !opts.Summary && !opts.Tags && !opts.Fresh && !opts.Kebab {
 				opts = brain.AllRules()
 			}
 

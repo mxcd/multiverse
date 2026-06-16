@@ -82,7 +82,7 @@ func TestResolveNoteAcrossBrains(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sb.Name != "beta" || rel != "domain/OnlyInBeta.md" {
+	if sb.Name != "beta" || rel != "domain/onlyinbeta.md" {
 		t.Fatalf("resolved to wrong brain/path: %s %s", sb.Name, rel)
 	}
 

@@ -36,7 +36,7 @@ func TestWriteThenLoadRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("write: %v", err)
 	}
-	if rel != "domain/Service Basics.md" {
+	if rel != "domain/service-basics.md" {
 		t.Fatalf("unexpected path %q", rel)
 	}
 	n, err := b.Load(rel)
@@ -71,7 +71,7 @@ func TestResolveAmbiguous(t *testing.T) {
 			t.Fatalf("expected AmbiguousError, got %v", err)
 		}
 	}
-	if rel, err := b.Resolve("domain/Dup.md"); err != nil || rel != "domain/Dup.md" {
+	if rel, err := b.Resolve("domain/dup.md"); err != nil || rel != "domain/dup.md" {
 		t.Fatalf("exact path should resolve: %q %v", rel, err)
 	}
 }
@@ -117,7 +117,7 @@ func TestBacklinks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(back) != 1 || back[0] != "domain/Source.md" {
+	if len(back) != 1 || back[0] != "domain/source.md" {
 		t.Fatalf("unexpected backlinks: %v", back)
 	}
 }

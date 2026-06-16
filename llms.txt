@@ -81,7 +81,8 @@ multi append "<note>" --content "<md>"   # or --stdin
 # transport & integrity (multi runs git for you)
 multi sync [-m "msg"]               # commit local → pull --rebase → push every brain in scope
 multi status
-multi lint [--summary|--tags|--fresh] [--json]
+multi lint [--summary|--tags|--fresh|--kebab] [--json]
+multi fix [--dry-run] [--keep-display]   # rename every file+dir to kebab-case & rewrite all [[links]]
 ```
 
 Most read commands accept `--json` for machine consumption. Errors are
@@ -103,7 +104,9 @@ freshness: ...         # one-line currency/trust note
 Standing rules: every note has a `summary`; every *content* note carries one
 split tag and records `source`/`retrieved`/`freshness`; hubs and the
 `[[wikilink]]` graph are the index, not folders. One fact per file; never
-co-edit a shared note.
+co-edit a shared note. File and directory names are kebab-case (lowercase,
+hyphen-separated, ASCII) — `multi write` slugs `--title`/`--dir`/`--path` for you
+while keeping the in-note `# H1` human, and `multi fix` migrates a legacy brain.
 
 ## Multiple brains (per-directory scope)
 

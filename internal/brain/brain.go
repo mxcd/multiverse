@@ -109,11 +109,23 @@ func (b *Brain) Resolve(q string) (string, error) {
 		return "", err
 	}
 	want := strings.TrimSuffix(q, ".md")
-	var matches []string
+	wantKey := slugKey(want)
+	// Prefer an exact base-name match; fall back to slug-equality so a legacy
+	// reference like "Formula Student" still resolves to "formula-student.md"
+	// (and the reverse), keeping links live across the kebab-case migration.
+	var exact, fuzzy []string
 	for _, rel := range notes {
-		if strings.TrimSuffix(filepath.Base(rel), ".md") == want {
-			matches = append(matches, rel)
+		base := strings.TrimSuffix(filepath.Base(rel), ".md")
+		switch {
+		case base == want:
+			exact = append(exact, rel)
+		case wantKey != "" && slugKey(base) == wantKey:
+			fuzzy = append(fuzzy, rel)
 		}
+	}
+	matches := exact
+	if len(matches) == 0 {
+		matches = fuzzy
 	}
 	switch len(matches) {
 	case 1:
@@ -132,7 +144,7 @@ func (b *Brain) IsContent(n *Note) bool {
 	if !strings.Contains(n.Rel, "/") {
 		return false
 	}
-	if strings.HasPrefix(n.Rel, "Templates/") {
+	if strings.HasPrefix(strings.ToLower(n.Rel), "templates/") {
 		return false
 	}
 	return n.FM.Type != "meta"

@@ -1,7 +1,6 @@
 package brain
 
 import (
-	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -36,9 +35,10 @@ func (b *Brain) Links(rel string) ([]string, error) {
 	return extractLinks(n.Body), nil
 }
 
-// Backlinks returns the notes that link to the given note (by its base name).
+// Backlinks returns the notes that link to the given note. Targets are compared
+// on their slug key, so a link survives whatever case/spacing it was written in.
 func (b *Brain) Backlinks(rel string) ([]string, error) {
-	target := strings.TrimSuffix(filepath.Base(rel), ".md")
+	target := slugKey(rel)
 	notes, err := b.Notes()
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func (b *Brain) Backlinks(rel string) ([]string, error) {
 			return nil, err
 		}
 		for _, link := range extractLinks(n.Body) {
-			if strings.EqualFold(strings.TrimSuffix(link, ".md"), target) {
+			if slugKey(link) == target {
 				out = append(out, other)
 				break
 			}
@@ -76,7 +76,7 @@ func (b *Brain) Orphans() ([]string, error) {
 			return nil, err
 		}
 		for _, link := range extractLinks(n.Body) {
-			linked[strings.ToLower(strings.TrimSuffix(link, ".md"))] = true
+			linked[slugKey(link)] = true
 		}
 	}
 	var out []string
@@ -88,8 +88,7 @@ func (b *Brain) Orphans() ([]string, error) {
 		if !b.IsContent(n) {
 			continue
 		}
-		base := strings.ToLower(strings.TrimSuffix(filepath.Base(rel), ".md"))
-		if !linked[base] {
+		if !linked[slugKey(rel)] {
 			out = append(out, rel)
 		}
 	}

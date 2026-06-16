@@ -15,13 +15,13 @@ var ErrSummaryRequired = errors.New("a note must have a one-line summary (the ga
 
 // WriteParams describes a note to create.
 type WriteParams struct {
-	Path    string // explicit vault-relative path; takes precedence over Dir/Title
-	Dir     string // directory for the note when Path is empty
-	Title   string // note title; also the filename when Path is empty
-	Type    string
-	Status  string
-	Summary string
-	Tags    []string
+	Path      string // explicit vault-relative path; takes precedence over Dir/Title
+	Dir       string // directory for the note when Path is empty
+	Title     string // note title; also the filename when Path is empty
+	Type      string
+	Status    string
+	Summary   string
+	Tags      []string
 	Source    string
 	Retrieved string
 	Freshness string
@@ -60,7 +60,7 @@ func (b *Brain) Write(p WriteParams) (string, error) {
 
 	title := p.Title
 	if title == "" {
-		title = strings.TrimSuffix(filepath.Base(rel), ".md")
+		title = humanTitle(p)
 	}
 	body := strings.TrimLeft(p.Body, "\n")
 	var sb strings.Builder
@@ -104,22 +104,38 @@ func (b *Brain) Append(rel, content string) error {
 	return os.WriteFile(abs, []byte(buf), 0o644)
 }
 
+// notePath derives the note's vault-relative path and forces it to kebab-case so
+// names stay portable across case-insensitive filesystems. A title like
+// "Stalwart v0.16 / Migration" can no longer leak into directory nesting or a
+// truncated filename — every segment is slugged independently.
 func notePath(p WriteParams) string {
 	if p.Path != "" {
 		rel := filepath.ToSlash(p.Path)
 		if !strings.HasSuffix(rel, ".md") {
 			rel += ".md"
 		}
-		return rel
+		return SlugifyPath(rel)
 	}
 	if p.Title == "" {
 		return ""
 	}
-	name := p.Title + ".md"
+	name := slugOrUntitled(p.Title) + ".md"
 	if p.Dir != "" {
-		return filepath.ToSlash(filepath.Join(p.Dir, name))
+		return SlugifyPath(p.Dir) + "/" + name
 	}
 	return name
+}
+
+// humanTitle is the H1 heading used when no explicit --title is given: the
+// original (un-slugged) base name of an explicit --path, so the note body stays
+// human-readable even though its filename is a slug.
+func humanTitle(p WriteParams) string {
+	src := p.Path
+	if src == "" {
+		src = p.Title
+	}
+	base := filepath.Base(filepath.ToSlash(src))
+	return strings.TrimSuffix(base, ".md")
 }
 
 func orDefault(v, def string) string {
