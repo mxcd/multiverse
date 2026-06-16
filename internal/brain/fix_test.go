@@ -133,6 +133,14 @@ func TestFixCollisionAborts(t *testing.T) {
 }
 
 func TestFixGitPreservesAndRecases(t *testing.T) {
+	// Make commits hermetic: CI runners often have no git author identity, and
+	// Init(withGit) commits the scaffold. Env identity needs no config and takes
+	// precedence, so the test never depends on the runner's ambient git setup.
+	t.Setenv("GIT_AUTHOR_NAME", "multi test")
+	t.Setenv("GIT_AUTHOR_EMAIL", "test@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "multi test")
+	t.Setenv("GIT_COMMITTER_EMAIL", "test@example.com")
+
 	b, err := Init(t.TempDir(), Settings{Name: "g", Split: []string{"domain"}}, true)
 	if err != nil {
 		t.Fatal(err)
