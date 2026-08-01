@@ -116,27 +116,34 @@ Errors are self-correcting (they say how to fix), and read commands take `--json
 ## The agent loop
 
 ```bash
+# session start — one bounded, deterministic context load
+multi wake-up                       # identity notes in full + pinned facts as one-liners
+
 # read — summary first, body only on confirmed relevance
 multi list                          # index: every note + its summary
 multi summary "Project Overview"    # one note's summary
 multi fm "Project Overview"         # full front-matter block
-multi search "onboarding" [--body]  # match path/summary/tags (+ bodies)
+multi search "vue websocket" [--body]  # ranked: ALL terms must match; path > tags > summary > body
 multi find --type reference --tag projects --status active
+multi similar "reconnect strategy" # semantic search over the shadow index (see below)
+multi similar --note "Some Note"    # nearest neighbors of an existing note
 multi read "Project Overview"       # the deliberate full read
 multi links / backlinks "..." / orphans
 
-# write — structured + auto-committed
+# write — structured + auto-committed (+ near-duplicate warning)
 multi write --title "Deployment Runbook" --dir projects \
   --summary "how to deploy the service and roll back" \
   --tags projects,deployment --source "..." --freshness "current" \
   --body "..."                      # or --stdin
+multi write --pinned ...            # pin a critical fact into `multi wake-up`
 multi append "Deployment Runbook" --content "addendum"   # or --stdin
 
 # transport & integrity
 multi sync [-m "msg"]               # commit local → pull --rebase → push
 multi status
-multi lint [--summary|--tags|--fresh|--kebab] [--json]
+multi lint [--summary|--tags|--fresh|--kebab|--taxonomy] [--json]
 multi fix [--dry-run] [--keep-display]   # rename files+dirs to kebab-case & rewrite links
+multi reindex [--force]             # refresh the semantic shadow index (incremental)
 ```
 
 Most read commands accept `--json` for machine consumption.
@@ -160,6 +167,27 @@ freshness: ...         # one-line currency/trust note
 *content* note carries one split tag and records `source`/`retrieved`/`freshness`;
 hubs and the `[[wikilink]]` graph are the index, not folders.
 
+**Closed taxonomy (optional).** A brain can close its `type`/`status`
+vocabularies in `.multi/brain.yaml` — then `multi write` rejects and
+`multi lint` flags anything outside them, so the vocabulary can't drift as
+agents write:
+
+```yaml
+taxonomy:
+  types: [pattern, reference, decision, lesson, project, journal, moc, feedback]
+  statuses: [active, draft, deprecated, archived]
+```
+
+**Wake-up (session bootstrap).** `multi wake-up` prints a small, deterministic
+context block: the notes listed under `wakeup:` in `.multi/brain.yaml` in full
+(L0 — keep them short) plus every note with `pinned: true` front matter as a
+`path | summary` line (L1). Point your agent's session-start hook at it and
+stop re-discovering the brain every session:
+
+```yaml
+wakeup: [working-with-me, collaboration-style]
+```
+
 **File names are kebab-case.** Every file and directory name is forced to
 lowercase-with-hyphens (`projects/deployment-runbook.md`) so brains stay portable
 across case-insensitive filesystems (Windows, macOS) and safe to type unquoted.
@@ -168,6 +196,44 @@ human-readable, and you can still reference a note by any casing. To migrate an
 existing brain, `multi fix` renames every file and directory and rewrites every
 `[[wikilink]]` to match (`--dry-run` to preview, `--keep-display` to preserve a
 link's rendered text as `[[slug|Old Name]]`).
+
+## Semantic recall — the shadow index
+
+`multi search` matches words; `multi similar` matches meaning. It runs on a
+**derived, disposable** embedding index: one vector per note, cached outside the
+repo (`~/.cache/multi/` — never committed), brute-force cosine at query time.
+Markdown stays the only source of truth; delete the cache any time and
+`multi reindex` rebuilds it incrementally (unchanged notes are skipped by
+content hash).
+
+Configure an OpenAI-compatible `/v1/embeddings` endpoint per brain in
+`.multi/brain.yaml` — local Ollama, LM Studio, vLLM and OpenAI all speak it:
+
+```yaml
+embeddings:
+  base_url: http://localhost:11434/v1        # Ollama
+  model: qwen3-embedding:0.6b                # ollama pull qwen3-embedding:0.6b
+  query_prefix: "Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery: "
+  # doc_prefix: ""                           # qwen3 embeds documents raw
+  # api_key_env: OPENAI_API_KEY              # only for endpoints that need auth
+```
+
+Model notes: `qwen3-embedding:0.6b` is the recommended default (best
+quality-per-RAM on Ollama, 32K context, multilingual, Apache-2.0) — and it
+wants the instruct prefix on *queries only*, which the config above bakes in.
+Ollama never applies model prefixes for you. `snowflake-arctic-embed2`
+(`query_prefix: "query: "`) is a solid runner-up with the best German retrieval
+scores. Then:
+
+```bash
+multi reindex                       # first build embeds everything; later runs only the diff
+multi similar "how do we handle websocket reconnects"
+multi similar --note "Some Pattern" # near-duplicate / related-note hunting
+```
+
+Without an `embeddings:` block, `similar`/`reindex` simply say so and everything
+else works unchanged. `multi write` also warns lexically (token overlap, no
+network needed) when a new note looks like a near-duplicate of an existing one.
 
 ## Large files
 
@@ -259,7 +325,7 @@ internal/tui         Bubble Tea control panel
 ## Roadmap (deferred from v1)
 
 - Object-storage attachment path (`mv`-free large-file handling).
-- Embedding / semantic search + an MCP server surface for agents.
+- An MCP server surface for agents.
 - Background sync daemon (watch + debounced sync) so reads are always current.
 - Safe front-matter updates that preserve unknown keys.
 ```

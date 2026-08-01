@@ -63,26 +63,33 @@ binaries out of git), and `.gitattributes` with `*.md merge=union`, then runs
 ## The agent loop
 
 ```bash
+# session start — one bounded, deterministic context load
+multi wake-up                       # identity notes in full + pinned facts (run FIRST each session)
+
 # read — summary first, body only on confirmed relevance
 multi list                          # index: every note + its summary (all sources)
 multi summary "<note>"              # one note's one-line gate
 multi fm "<note>"                   # full front-matter block
-multi search "<query>" [--body]     # match path/summary/tags (+ bodies)
+multi search "<terms>" [--body]     # ranked; ALL terms must match (path > tags > summary > body)
 multi find --type reference --tag <tag> --status active
+multi similar "<query>"             # semantic search (meaning, not words; needs `multi reindex`)
+multi similar --note "<note>"       # nearest neighbors: dedup & related notes
 multi read "<note>"                 # the deliberate full body read
 multi backlinks "<note>" · multi links "<note>" · multi orphans
 
 # write — structured + auto-committed (--summary is REQUIRED, one line about contents)
 multi write --title "<title>" --dir <dir> \
   --summary "<one line>" --tags <tag> --source "<where>" --freshness "<currency>" \
-  --body "<md>"                     # or --stdin
+  --body "<md>"                     # or --stdin; warns when it looks like a near-duplicate
+multi write --pinned ...            # pin a critical fact into `multi wake-up`
 multi append "<note>" --content "<md>"   # or --stdin
 
 # transport & integrity (multi runs git for you)
 multi sync [-m "msg"]               # commit local → pull --rebase → push every brain in scope
 multi status
-multi lint [--summary|--tags|--fresh|--kebab] [--json]
+multi lint [--summary|--tags|--fresh|--kebab|--taxonomy] [--json]
 multi fix [--dry-run] [--keep-display]   # rename every file+dir to kebab-case & rewrite all [[links]]
+multi reindex [--force]             # refresh the semantic shadow index (incremental, disposable cache)
 ```
 
 Most read commands accept `--json` for machine consumption. Errors are
@@ -107,6 +114,22 @@ split tag and records `source`/`retrieved`/`freshness`; hubs and the
 co-edit a shared note. File and directory names are kebab-case (lowercase,
 hyphen-separated, ASCII) — `multi write` slugs `--title`/`--dir`/`--path` for you
 while keeping the in-note `# H1` human, and `multi fix` migrates a legacy brain.
+
+A brain may close its `type`/`status` vocabularies (`taxonomy:` in
+`.multi/brain.yaml`) — then writes outside them are rejected with the allowed
+values in the error, and `multi lint` flags drift. `pinned: true` front matter
+surfaces a note in `multi wake-up`; the `wakeup:` settings list names the
+identity notes printed there in full.
+
+## Semantic shadow index (optional)
+
+Per-brain `embeddings:` config in `.multi/brain.yaml` points at any
+OpenAI-compatible `/v1/embeddings` endpoint (local Ollama recommended:
+`model: qwen3-embedding:0.6b` with the qwen3 instruct `query_prefix`). The
+index is a derived cache under `~/.cache/multi/` — never committed, rebuilt
+incrementally by `multi reindex`, queried by `multi similar`. Markdown remains
+the only source of truth. Without the config, both commands explain themselves
+and everything else works unchanged.
 
 ## Multiple brains (per-directory scope)
 
