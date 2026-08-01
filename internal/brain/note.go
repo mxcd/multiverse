@@ -15,6 +15,7 @@ import (
 type FrontMatter struct {
 	Type          string   `yaml:"type,omitempty"`
 	Status        string   `yaml:"status,omitempty"`
+	Pinned        bool     `yaml:"pinned,omitempty"`
 	Tags          []string `yaml:"tags,omitempty"`
 	Created       string   `yaml:"created,omitempty"`
 	Updated       string   `yaml:"updated,omitempty"`
@@ -81,6 +82,9 @@ func (fm FrontMatter) Render() string {
 	}
 	scalar("type", fm.Type)
 	scalar("status", fm.Status)
+	if fm.Pinned {
+		b.WriteString("pinned: true\n")
+	}
 	list("tags", fm.Tags)
 	scalar("created", fm.Created)
 	scalar("updated", fm.Updated)

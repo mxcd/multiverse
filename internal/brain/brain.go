@@ -5,6 +5,7 @@
 package brain
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -21,6 +22,43 @@ type Settings struct {
 	// Split lists the mutually-exclusive "half" tags every content note must
 	// carry exactly one of (e.g. [domain, operations]). Empty disables the rule.
 	Split []string `yaml:"split,omitempty"`
+	// Taxonomy closes the type/status vocabularies. Empty lists disable the rule.
+	Taxonomy Taxonomy `yaml:"taxonomy,omitempty"`
+	// Wakeup lists the identity notes `multi wake-up` prints in full (L0).
+	// Keep them short — they are loaded at the start of every session.
+	Wakeup []string `yaml:"wakeup,omitempty"`
+	// Embeddings configures the optional semantic shadow index. Nil disables
+	// `multi reindex` and `multi similar` for this brain.
+	Embeddings *EmbedSettings `yaml:"embeddings,omitempty"`
+}
+
+// Taxonomy is the closed vocabulary for note front matter. A configured list
+// makes writes reject and lint flag values outside it.
+type Taxonomy struct {
+	Types    []string `yaml:"types,omitempty"`
+	Statuses []string `yaml:"statuses,omitempty"`
+}
+
+// CheckType returns an error when types are closed and t is not among them.
+func (x Taxonomy) CheckType(t string) error {
+	return checkVocab("type", t, x.Types)
+}
+
+// CheckStatus returns an error when statuses are closed and s is not among them.
+func (x Taxonomy) CheckStatus(s string) error {
+	return checkVocab("status", s, x.Statuses)
+}
+
+func checkVocab(field, v string, allowed []string) error {
+	if len(allowed) == 0 || v == "" {
+		return nil
+	}
+	for _, a := range allowed {
+		if strings.EqualFold(a, v) {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s %q is not in the brain's taxonomy (%s)", field, v, strings.Join(allowed, "|"))
 }
 
 // Brain is an opened brain rooted at a directory on disk.

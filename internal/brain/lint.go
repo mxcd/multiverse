@@ -23,15 +23,16 @@ func (r LintReport) OK() bool { return len(r.Findings) == 0 }
 
 // LintOptions selects which standing rules to enforce.
 type LintOptions struct {
-	Summary bool // every note carries a one-line summary
-	Tags    bool // every content note carries exactly one split tag
-	Fresh   bool // every content note records source + retrieved + freshness
-	Kebab   bool // every file and directory name is kebab-case
+	Summary  bool // every note carries a one-line summary
+	Tags     bool // every content note carries exactly one split tag
+	Fresh    bool // every content note records source + retrieved + freshness
+	Kebab    bool // every file and directory name is kebab-case
+	Taxonomy bool // type/status stay within the brain's closed vocabularies
 }
 
 // AllRules enables every rule.
 func AllRules() LintOptions {
-	return LintOptions{Summary: true, Tags: true, Fresh: true, Kebab: true}
+	return LintOptions{Summary: true, Tags: true, Fresh: true, Kebab: true, Taxonomy: true}
 }
 
 // Lint runs the selected standing-rule checks across the brain.
@@ -59,6 +60,15 @@ func (b *Brain) Lint(opts LintOptions) (LintReport, error) {
 				rep.add(rel, "summary", "no front matter")
 			} else if strings.TrimSpace(n.FM.Summary) == "" {
 				rep.add(rel, "summary", "missing summary")
+			}
+		}
+
+		if opts.Taxonomy && content {
+			if err := b.Settings.Taxonomy.CheckType(n.FM.Type); err != nil {
+				rep.add(rel, "taxonomy", err.Error())
+			}
+			if err := b.Settings.Taxonomy.CheckStatus(n.FM.Status); err != nil {
+				rep.add(rel, "taxonomy", err.Error())
 			}
 		}
 

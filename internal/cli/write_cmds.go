@@ -25,6 +25,7 @@ func writeCmd() *cli.Command {
 			&cli.StringFlag{Name: "dir", Usage: "directory for the note when using --title"},
 			&cli.StringFlag{Name: "type", Value: "reference", Usage: "moc|reference|decision|hub|meta"},
 			&cli.StringFlag{Name: "status", Value: "active", Usage: "active|draft|deprecated"},
+			&cli.BoolFlag{Name: "pinned", Usage: "surface this note in `multi wake-up`"},
 			&cli.StringFlag{Name: "summary", Usage: "one-line summary (required)"},
 			&cli.StringSliceFlag{Name: "tags", Usage: "tags (repeatable or comma-separated)"},
 			&cli.StringFlag{Name: "source", Usage: "provenance"},
@@ -52,12 +53,19 @@ func writeCmd() *cli.Command {
 				}
 				body = string(data)
 			}
+			title := cmd.String("title")
+			if title == "" {
+				title = cmd.String("path")
+			}
+			// Best-effort, before the write so the new note can't match itself.
+			dups, _ := target.NearDuplicates(title, cmd.String("summary"), 0.6, 3)
 			rel, err := target.Write(brain.WriteParams{
 				Path:      cmd.String("path"),
 				Dir:       cmd.String("dir"),
 				Title:     cmd.String("title"),
 				Type:      cmd.String("type"),
 				Status:    cmd.String("status"),
+				Pinned:    cmd.Bool("pinned"),
 				Summary:   cmd.String("summary"),
 				Tags:      splitCSV(cmd.StringSlice("tags")),
 				Source:    cmd.String("source"),
@@ -69,6 +77,12 @@ func writeCmd() *cli.Command {
 				return err
 			}
 			fmt.Printf("wrote %s:%s\n", target.Name, rel)
+			for i, d := range dups {
+				if i == 0 {
+					fmt.Fprintln(os.Stderr, "warning: similar notes already exist — one fact per file; prefer `multi append` over a duplicate:")
+				}
+				fmt.Fprintf(os.Stderr, "  %.2f  %s | %s\n", d.Score, d.Path, d.Summary)
+			}
 			return maybeCommit(target, cmd, []string{rel}, "note: "+rel)
 		},
 	}

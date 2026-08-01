@@ -20,6 +20,7 @@ type WriteParams struct {
 	Title     string // note title; also the filename when Path is empty
 	Type      string
 	Status    string
+	Pinned    bool // surface this note in `multi wake-up`
 	Summary   string
 	Tags      []string
 	Source    string
@@ -39,6 +40,16 @@ func (b *Brain) Write(p WriteParams) (string, error) {
 	if rel == "" {
 		return "", errors.New("a note needs a --path or a --title")
 	}
+	// Taxonomy binds content notes only — root navigation notes, templates and
+	// type: meta stay exempt, mirroring the split/freshness rules.
+	if strings.Contains(rel, "/") && !strings.HasPrefix(strings.ToLower(rel), "templates/") && orDefault(p.Type, "reference") != "meta" {
+		if err := b.Settings.Taxonomy.CheckType(orDefault(p.Type, "reference")); err != nil {
+			return "", err
+		}
+		if err := b.Settings.Taxonomy.CheckStatus(orDefault(p.Status, "active")); err != nil {
+			return "", err
+		}
+	}
 	abs := filepath.Join(b.Root, filepath.FromSlash(rel))
 	if !p.Force {
 		if _, err := os.Stat(abs); err == nil {
@@ -50,6 +61,7 @@ func (b *Brain) Write(p WriteParams) (string, error) {
 	fm := FrontMatter{
 		Type:      orDefault(p.Type, "reference"),
 		Status:    orDefault(p.Status, "active"),
+		Pinned:    p.Pinned,
 		Tags:      p.Tags,
 		Created:   today,
 		Summary:   strings.TrimSpace(p.Summary),

@@ -213,6 +213,7 @@ func (s *Scope) search(q string, body bool) ([]brain.NoteInfo, error) {
 		}
 		all = append(all, stamp(notes, sb.Name)...)
 	}
+	brain.SortByScore(all)
 	return all, nil
 }
 

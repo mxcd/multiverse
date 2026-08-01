@@ -38,12 +38,14 @@ func NewApp(version string) *cli.Command {
 			useCmd(),
 			scopeCmd(),
 			// read (span all sources)
+			wakeupCmd(),
 			listCmd(),
 			summaryCmd(),
 			fmCmd(),
 			readCmd(),
 			searchCmd(),
 			findCmd(),
+			similarCmd(),
 			linksCmd(),
 			backlinksCmd(),
 			orphansCmd(),
@@ -55,6 +57,7 @@ func NewApp(version string) *cli.Command {
 			statusCmd(),
 			lintCmd(),
 			fixCmd(),
+			reindexCmd(),
 		},
 	}
 }
