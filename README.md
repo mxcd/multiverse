@@ -178,6 +178,15 @@ taxonomy:
   statuses: [active, draft, deprecated, archived]
 ```
 
+**Ignored directories (optional).** A brain that hosts tooling alongside its
+notes (a docs site, a visual plan app) can exclude directory names from note
+discovery — matched anywhere in the tree. Dot-directories (`.git`, `.obsidian`,
+`.multi`) and `node_modules` are always ignored:
+
+```yaml
+ignore: [dist, vendor]
+```
+
 **Wake-up (session bootstrap).** `multi wake-up` prints a small, deterministic
 context block: the notes listed under `wakeup:` in `.multi/brain.yaml` in full
 (L0 — keep them short) plus every note with `pinned: true` front matter as a
