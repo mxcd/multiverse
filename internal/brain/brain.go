@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -27,6 +28,10 @@ type Settings struct {
 	// Wakeup lists the identity notes `multi wake-up` prints in full (L0).
 	// Keep them short — they are loaded at the start of every session.
 	Wakeup []string `yaml:"wakeup,omitempty"`
+	// Ignore lists directory names excluded from note discovery anywhere in
+	// the tree (e.g. [dist, vendor]), for brains that host tooling alongside
+	// notes. Dot-directories and node_modules are always ignored.
+	Ignore []string `yaml:"ignore,omitempty"`
 	// Embeddings configures the optional semantic shadow index. Nil disables
 	// `multi reindex` and `multi similar` for this brain.
 	Embeddings *EmbedSettings `yaml:"embeddings,omitempty"`
@@ -105,8 +110,19 @@ func (b *Brain) SaveSettings() error {
 	return os.WriteFile(filepath.Join(b.Root, settingsRel), data, 0o644)
 }
 
+// skipWalkDir reports whether a walked directory is pruned from note
+// discovery: dot-directories (.git, .obsidian, .multi), node_modules, and any
+// directory name listed under `ignore:` in the brain settings.
+func (b *Brain) skipWalkDir(name string) bool {
+	if strings.HasPrefix(name, ".") || name == "node_modules" {
+		return true
+	}
+	return slices.Contains(b.Settings.Ignore, name)
+}
+
 // Notes returns every markdown note path (vault-relative, sorted), skipping
-// dot-directories such as .git, .obsidian and .multi.
+// dot-directories such as .git, .obsidian and .multi, node_modules, and the
+// brain's configured ignore directories.
 func (b *Brain) Notes() ([]string, error) {
 	var out []string
 	err := filepath.WalkDir(b.Root, func(p string, d fs.DirEntry, err error) error {
@@ -114,7 +130,7 @@ func (b *Brain) Notes() ([]string, error) {
 			return err
 		}
 		if d.IsDir() {
-			if p != b.Root && strings.HasPrefix(d.Name(), ".") {
+			if p != b.Root && b.skipWalkDir(d.Name()) {
 				return fs.SkipDir
 			}
 			return nil

@@ -198,7 +198,7 @@ func renameCaseAware(fromAbs, toAbs string, caseOnly bool) error {
 }
 
 // pruneEmptyDirs removes empty directories under the brain root, deepest first,
-// skipping dot-directories (.git, .multi, .obsidian).
+// skipping dot-directories (.git, .multi, .obsidian) and node_modules.
 func (b *Brain) pruneEmptyDirs() error {
 	var dirs []string
 	err := filepath.WalkDir(b.Root, func(p string, d fs.DirEntry, err error) error {
@@ -206,7 +206,7 @@ func (b *Brain) pruneEmptyDirs() error {
 			return err
 		}
 		if d.IsDir() {
-			if p != b.Root && strings.HasPrefix(d.Name(), ".") {
+			if p != b.Root && b.skipWalkDir(d.Name()) {
 				return fs.SkipDir
 			}
 			if p != b.Root {
@@ -245,7 +245,7 @@ func (b *Brain) recaseDirs() error {
 			if !d.IsDir() {
 				return nil
 			}
-			if p != b.Root && strings.HasPrefix(d.Name(), ".") {
+			if p != b.Root && b.skipWalkDir(d.Name()) {
 				return fs.SkipDir
 			}
 			if p == b.Root {

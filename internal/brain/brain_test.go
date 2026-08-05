@@ -2,6 +2,8 @@ package brain
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -119,5 +121,52 @@ func TestBacklinks(t *testing.T) {
 	}
 	if len(back) != 1 || back[0] != "domain/source.md" {
 		t.Fatalf("unexpected backlinks: %v", back)
+	}
+}
+
+func TestNotesSkipsNodeModules(t *testing.T) {
+	b := newBrain(t)
+	if _, err := b.Write(WriteParams{Title: "Real Note", Dir: "domain", Summary: "s", Tags: []string{"domain"}}); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	junk := filepath.Join(b.Root, "tooling", "node_modules", "some-pkg")
+	if err := os.MkdirAll(junk, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(junk, "README.md"), []byte("# junk"), 0o644); err != nil {
+		t.Fatalf("write junk: %v", err)
+	}
+	notes, err := b.Notes()
+	if err != nil {
+		t.Fatalf("notes: %v", err)
+	}
+	for _, n := range notes {
+		if strings.Contains(n, "node_modules") {
+			t.Fatalf("node_modules note leaked into discovery: %s", n)
+		}
+	}
+}
+
+func TestNotesRespectsIgnoreSetting(t *testing.T) {
+	b := newBrain(t)
+	b.Settings.Ignore = []string{"dist"}
+	if _, err := b.Write(WriteParams{Title: "Real Note", Dir: "domain", Summary: "s", Tags: []string{"domain"}}); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	junk := filepath.Join(b.Root, "tooling", "dist")
+	if err := os.MkdirAll(junk, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(junk, "README.md"), []byte("# junk"), 0o644); err != nil {
+		t.Fatalf("write junk: %v", err)
+	}
+	notes, err := b.Notes()
+	if err != nil {
+		t.Fatalf("notes: %v", err)
+	}
+	for _, n := range notes {
+		if strings.Contains(n, "dist") {
+			t.Fatalf("ignored dir leaked into discovery: %s", n)
+		}
 	}
 }
