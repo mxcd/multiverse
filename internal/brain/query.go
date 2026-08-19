@@ -108,11 +108,38 @@ func (b *Brain) Search(query string, body bool) ([]NoteInfo, error) {
 			}
 		}
 		info := b.info(n)
-		info.Score = score
+		info.Score = score * rankWeight(&n.FM)
 		out = append(out, info)
 	}
 	SortByScore(out)
 	return out, nil
+}
+
+// rankWeight scales a raw match score by front-matter signals so retrieval
+// favors what is current and load-bearing: superseded notes sink, drafts dip,
+// pinned notes and decision/pattern/lesson types get a nudge.
+func rankWeight(fm *FrontMatter) float64 {
+	w := statusWeight(fm.Status)
+	if fm.Pinned {
+		w *= 1.2
+	}
+	switch fm.Type {
+	case "decision", "pattern", "lesson":
+		w *= 1.1
+	}
+	return w
+}
+
+// statusWeight is the status-only demotion, shared with semantic retrieval:
+// deprecated knowledge must rank below the note that superseded it.
+func statusWeight(status string) float64 {
+	switch status {
+	case "deprecated", "archived":
+		return 0.3
+	case "draft":
+		return 0.8
+	}
+	return 1
 }
 
 // SortByScore orders notes best-first (score descending, path ascending as the

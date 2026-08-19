@@ -149,3 +149,40 @@ func TestSimilarWithoutConfigOrIndex(t *testing.T) {
 		t.Fatalf("expected ErrNoIndex, got %v", err)
 	}
 }
+
+func TestSimilarDemotesDeprecatedButSimilarNoteDoesNot(t *testing.T) {
+	var embedded int
+	srv := fakeEmbedServer(t, &embedded)
+	defer srv.Close()
+	b := embedBrain(t, srv.URL)
+
+	// A deprecated twin of the alpha note: identical embedding axis, so raw
+	// cosine ties with the active alpha note.
+	if _, err := b.Write(WriteParams{Title: "Alpha Superseded", Dir: "notes", Status: "deprecated",
+		Summary: "all about alpha things", Tags: []string{"domain"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := b.Reindex(false, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	hits, err := b.Similar("alpha", 2)
+	if err != nil {
+		t.Fatalf("similar: %v", err)
+	}
+	if hits[0].Path != "notes/alpha-topic.md" || hits[1].Path != "notes/alpha-superseded.md" {
+		t.Fatalf("active note should outrank its deprecated twin, got %+v", hits)
+	}
+	if hits[1].Score >= hits[0].Score*0.5 {
+		t.Fatalf("deprecated demotion too weak in similar: %+v", hits)
+	}
+
+	// Dedup view: the deprecated twin must surface at full cosine strength.
+	neighbors, err := b.SimilarNote("notes/alpha-topic.md", 1)
+	if err != nil {
+		t.Fatalf("similar note: %v", err)
+	}
+	if neighbors[0].Path != "notes/alpha-superseded.md" || neighbors[0].Score < 0.99 {
+		t.Fatalf("SimilarNote must not demote deprecated neighbors, got %+v", neighbors)
+	}
+}

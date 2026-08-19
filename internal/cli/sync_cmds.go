@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/mxcd/multiverse/internal/brain"
 	"github.com/urfave/cli/v3"
@@ -55,9 +56,39 @@ func statusCmd() *cli.Command {
 				default:
 					fmt.Println(out)
 				}
+				printEmbedStatus(sb.Brain)
 			}
 			return nil
 		},
+	}
+}
+
+// printEmbedStatus surfaces shadow-index coverage and age so staleness is
+// visible instead of silently degrading `multi similar` recall.
+func printEmbedStatus(b *brain.Brain) {
+	st, err := b.EmbedIndexStatus()
+	if err != nil {
+		return // embeddings not configured — nothing to report
+	}
+	age := "never built"
+	if !st.Updated.IsZero() {
+		age = "updated " + humanAge(time.Since(st.Updated))
+	}
+	current := ""
+	if st.Indexed < st.Notes {
+		current = fmt.Sprintf(" — %d note(s) unindexed, run `multi reindex`", st.Notes-st.Indexed)
+	}
+	fmt.Printf("embeddings: %d/%d notes indexed, %s%s\n", st.Indexed, st.Notes, age, current)
+}
+
+func humanAge(d time.Duration) string {
+	switch {
+	case d >= 48*time.Hour:
+		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+	case d >= time.Hour:
+		return fmt.Sprintf("%dh ago", int(d.Hours()))
+	default:
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
 	}
 }
 

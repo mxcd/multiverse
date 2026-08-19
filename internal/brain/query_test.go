@@ -56,3 +56,35 @@ func TestSearchBodyOptIn(t *testing.T) {
 		t.Fatalf("body should match with --body, got %+v (%v)", hits, err)
 	}
 }
+
+func TestSearchDemotesDeprecatedAndBoostsPinned(t *testing.T) {
+	b := newBrain(t)
+	mk := func(title, status string, pinned bool) {
+		t.Helper()
+		p := WriteParams{Title: title, Dir: "notes", Status: status, Pinned: pinned,
+			Summary: "quasar table pagination quirk", Tags: []string{"domain"}}
+		if _, err := b.Write(p); err != nil {
+			t.Fatalf("write %s: %v", title, err)
+		}
+	}
+	mk("Quasar Old Way", "deprecated", false)
+	mk("Quasar Current Way", "active", false)
+	mk("Quasar Pinned Way", "active", true)
+
+	hits, err := b.Search("quasar pagination", false)
+	if err != nil {
+		t.Fatalf("search: %v", err)
+	}
+	if len(hits) != 3 {
+		t.Fatalf("expected 3 hits, got %+v", hits)
+	}
+	if hits[0].Path != "notes/quasar-pinned-way.md" {
+		t.Fatalf("pinned note should rank first, got %+v", hits)
+	}
+	if hits[2].Path != "notes/quasar-old-way.md" {
+		t.Fatalf("deprecated note should rank last, got %+v", hits)
+	}
+	if hits[2].Score >= hits[1].Score*0.5 {
+		t.Fatalf("deprecated demotion too weak: %+v", hits)
+	}
+}

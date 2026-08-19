@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 )
@@ -183,9 +182,10 @@ func (b *Brain) Reindex(force bool, progress func(string)) (ReindexStats, error)
 	return stats, b.saveEmbedIndex(idx)
 }
 
-// Similar returns the topK notes semantically closest to the query, scored by
-// cosine similarity. Brute force over the whole index — at vault scale that is
-// faster than any ANN structure would ever pay for.
+// Similar returns the topK notes semantically closest to the query. Brute
+// force over the whole index — at vault scale that is faster than any ANN
+// structure would ever pay for. Scores are cosine similarity scaled by
+// statusWeight, so deprecated knowledge ranks below what superseded it.
 func (b *Brain) Similar(query string, topK int) ([]NoteInfo, error) {
 	es := b.Settings.Embeddings
 	if es == nil {
@@ -195,11 +195,12 @@ func (b *Brain) Similar(query string, topK int) ([]NoteInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return b.nearest(normalize(vecs[0]), topK, "")
+	return b.nearest(normalize(vecs[0]), topK, "", true)
 }
 
 // SimilarNote returns the topK nearest neighbors of an already-indexed note —
-// the primitive behind dedup and "related notes" during grooming.
+// the primitive behind dedup and "related notes" during grooming. Scores stay
+// raw cosine: dedup must see deprecated near-duplicates at full strength.
 func (b *Brain) SimilarNote(rel string, topK int) ([]NoteInfo, error) {
 	if b.Settings.Embeddings == nil {
 		return nil, ErrNoEmbeddings
@@ -209,46 +210,67 @@ func (b *Brain) SimilarNote(rel string, topK int) ([]NoteInfo, error) {
 	if !ok {
 		return nil, fmt.Errorf("%s is not in the embedding index — run `multi reindex`", rel)
 	}
-	return b.nearest(e.Vector, topK, rel)
+	return b.nearest(e.Vector, topK, rel, false)
 }
 
-func (b *Brain) nearest(query []float32, topK int, exclude string) ([]NoteInfo, error) {
+func (b *Brain) nearest(query []float32, topK int, exclude string, demote bool) ([]NoteInfo, error) {
 	idx := b.loadEmbedIndex()
 	if len(idx.Entries) == 0 {
 		return nil, ErrNoIndex
 	}
-	type hit struct {
-		rel   string
-		score float64
-	}
-	hits := make([]hit, 0, len(idx.Entries))
+	out := make([]NoteInfo, 0, len(idx.Entries))
 	for rel, e := range idx.Entries {
 		if rel == exclude {
 			continue
 		}
-		hits = append(hits, hit{rel, dot(query, e.Vector)})
-	}
-	sort.Slice(hits, func(i, j int) bool {
-		if hits[i].score != hits[j].score {
-			return hits[i].score > hits[j].score
-		}
-		return hits[i].rel < hits[j].rel
-	})
-	if topK > 0 && len(hits) > topK {
-		hits = hits[:topK]
-	}
-	out := make([]NoteInfo, 0, len(hits))
-	for _, h := range hits {
-		info := NoteInfo{Path: h.rel, Score: h.score}
+		info := NoteInfo{Path: rel, Score: dot(query, e.Vector)}
 		// A hit may be stale (note deleted since last reindex); keep the path
 		// but skip the front matter rather than failing the whole query.
-		if n, err := b.Load(h.rel); err == nil {
+		if n, err := b.Load(rel); err == nil {
+			score := info.Score
 			info = b.info(n)
-			info.Score = h.score
+			info.Score = score
+			if demote {
+				info.Score *= statusWeight(n.FM.Status)
+			}
 		}
 		out = append(out, info)
 	}
+	SortByScore(out)
+	if topK > 0 && len(out) > topK {
+		out = out[:topK]
+	}
 	return out, nil
+}
+
+// EmbedIndexStatus reports the shadow index's coverage and age: how many notes
+// carry a vector vs. how many exist on disk, and when the index file last
+// changed. Coverage by count catches new and deleted notes; edited notes with
+// stale vectors only surface on reindex (hashing every note here would cost a
+// full scan).
+type EmbedIndexStatus struct {
+	Indexed int
+	Notes   int
+	Updated time.Time
+}
+
+func (b *Brain) EmbedIndexStatus() (EmbedIndexStatus, error) {
+	var st EmbedIndexStatus
+	if b.Settings.Embeddings == nil {
+		return st, ErrNoEmbeddings
+	}
+	if p, err := b.embedIndexPath(); err == nil {
+		if fi, err := os.Stat(p); err == nil {
+			st.Updated = fi.ModTime()
+		}
+	}
+	st.Indexed = len(b.loadEmbedIndex().Entries)
+	notes, err := b.Notes()
+	if err != nil {
+		return st, err
+	}
+	st.Notes = len(notes)
+	return st, nil
 }
 
 // embed calls the OpenAI-compatible embeddings endpoint for a batch of texts.
