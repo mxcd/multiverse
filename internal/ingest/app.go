@@ -22,6 +22,7 @@ func NewApp(version string) *cli.Command {
 			hookCmd(),
 			dispatchCmd(),
 			runCmd(),
+			groomCmd(),
 			statusCmd(),
 			sessionCmd(),
 		},
@@ -75,6 +76,20 @@ func runCmd() *cli.Command {
 				return cli.Exit("integration failed (see dispatch.log)", 1)
 			}
 			return nil
+		},
+	}
+}
+
+func groomCmd() *cli.Command {
+	return &cli.Command{
+		Name:  "groom",
+		Usage: "steer one vault-maintenance cycle: fix lint findings, wire orphans, merge fresh dupes, refresh MOCs",
+		Flags: []cli.Flag{
+			&cli.DurationFlag{Name: "timeout", Value: GroomTimeout, Usage: "max wait for the agent's report"},
+			&cli.BoolFlag{Name: "verbose", Aliases: []string{"v"}},
+		},
+		Action: func(_ context.Context, cmd *cli.Command) error {
+			return Groom(cmd.Duration("timeout"), cmd.Bool("verbose"))
 		},
 	}
 }

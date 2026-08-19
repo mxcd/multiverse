@@ -127,7 +127,8 @@ func processJob(j Job, timeout time.Duration, verbose bool) bool {
 	if err := ledger.Save(); err != nil {
 		logf("ledger save: %v", err)
 	}
-	_ = SyncBrain() // backstop push in case the agent forgot
+	_ = SyncBrain()    // backstop push in case the agent forgot
+	_ = ReindexBrain() // keep `multi similar` current with what was just written
 	if verbose {
 		fmt.Printf("integrated run %d for %s\n", ledger.Runs, j.SessionID)
 	}

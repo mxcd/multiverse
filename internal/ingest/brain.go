@@ -1,6 +1,7 @@
 package ingest
 
 import (
+	"cmp"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,8 +10,10 @@ import (
 	"github.com/mxcd/multiverse/internal/config"
 )
 
-// BrainName is the registry name of the brain this ingester targets.
-const BrainName = "second-brain"
+// BrainName is the registry name of the brain this ingester targets. Override
+// it with INGESTER_BRAIN — set on the Stop-hook command and any cron entry;
+// the spawned dispatcher and steered session inherit it through the env.
+var BrainName = cmp.Or(os.Getenv("INGESTER_BRAIN"), "second-brain")
 
 // BrainDir resolves the target brain's on-disk path from the multi registry.
 func BrainDir() (string, error) {
@@ -38,4 +41,11 @@ func multiPath() string {
 // case the steered agent forgot to sync.
 func SyncBrain() error {
 	return exec.Command(multiPath(), "--brain", BrainName, "sync").Run()
+}
+
+// ReindexBrain refreshes the semantic shadow index (incremental) so notes the
+// steered agent just wrote become visible to `multi similar` immediately
+// instead of waiting for the next manual reindex.
+func ReindexBrain() error {
+	return exec.Command(multiPath(), "--brain", BrainName, "reindex").Run()
 }

@@ -61,6 +61,13 @@ making a new one.
 5. Be conservative with rewrites — improve, don't vandalise. Everything is git-tracked,
    but aim for net-positive edits only.
 
+## Session handoff (always, as the last integration step)
+Overwrite the BODY of `+"`journals/last-session-handoff.md`"+` (keep its front matter) with
+at most 15 lines: date, project/topic worked on, decisions made, open threads / next
+steps, and the notes you touched as `+"`[[wikilinks]]`"+`. This note is printed in full by
+`+"`multi wake-up`"+`, so the next session starts where this one left off — write it for
+that reader, and update it even when nothing else was worth integrating.
+
 ## When done — write the report (this is how completion is detected)
 Write your report to this exact path, OVERWRITING it:
 
