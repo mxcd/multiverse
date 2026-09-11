@@ -74,6 +74,7 @@ multi search "<terms>" [--body]     # ranked; ALL terms must match (path > tags 
 multi find --type reference --tag <tag> --status active
 multi similar "<query>"             # semantic search (meaning, not words; needs `multi reindex`)
 multi similar --note "<note>"       # nearest neighbors: dedup & related notes
+multi explore "<q1>" "<q2>" ...     # one call per task: search+similar per query, 1 hop along links, ranked summaries + top bodies
 multi read "<note>"                 # the deliberate full body read
 multi backlinks "<note>" · multi links "<note>" · multi orphans
 
@@ -130,6 +131,23 @@ index is a derived cache under `~/.cache/multi/` — never committed, rebuilt
 incrementally by `multi reindex`, queried by `multi similar`. Markdown remains
 the only source of truth. Without the config, both commands explain themselves
 and everything else works unchanged.
+
+## Explore - one call per task
+
+```bash
+multi explore "<q1>" "<q2>" "<q3>" [--bodies 5] [--hops 1] [--top 5] [--json]
+```
+
+Run it once at the start of a task instead of a search/similar/read loop. Each
+query goes through `search` and `similar`; the top hits of every list fuse by
+reciprocal rank into seeds, whose outgoing `[[wikilinks]]` are followed for
+`--hops`. MOCs and notes with more than 30 links are hubs: reached, listed,
+never expanded. Seeds rank above linked notes. Output: every hit as a
+`path | summary` line (seeds, then linked), then the bodies of the `--bodies`
+best seeds (MOC bodies skipped). Give 3-5 short queries naming the
+technologies, projects and the verb of the task; more queries beat deeper hops
+(`--hops 2` returns a tenth of a big brain). Then `multi read` whatever else
+looks relevant. Works on `search` alone when no shadow index is configured.
 
 ## Multiple brains (per-directory scope)
 

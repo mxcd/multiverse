@@ -1,5 +1,5 @@
-// Recall commands: the session bootstrap (wake-up) and the semantic shadow
-// index (reindex, similar). Search stays the lexical workhorse; these cover
+// Recall commands: the session bootstrap (wake-up), the semantic shadow
+// index (reindex, similar) and the one-call task retrieval (explore). Search stays the lexical workhorse; these cover
 // what substring matching can't — session priming and meaning-based recall.
 package cli
 
@@ -179,4 +179,120 @@ func printSimilar(cmd *cli.Command, notes []brain.NoteInfo, withBrain bool) erro
 		}
 	}
 	return nil
+}
+
+func exploreCmd() *cli.Command {
+	return &cli.Command{
+		Name:      "explore",
+		Usage:     "one-call retrieval for a task: search + similar per query, one hop along links, ranked summaries plus the top bodies",
+		ArgsUsage: `"<query>" ["<query>" ...]`,
+		Description: "Runs every query through `search` and `similar`, unions the top hits as seeds,\n" +
+			"follows their outgoing wikilinks for --hops (MOCs and other hubs are reached but\n" +
+			"never expanded), and prints the result ranked: every summary as a `path | summary`\n" +
+			"line, then the full body of the --bodies best notes. Give 3-5 short queries that\n" +
+			"name the technologies, projects and the verb of the task; more queries beat\n" +
+			"deeper hops. No model in the loop: the caller reads summaries, then bodies.",
+		Flags: withBrain(
+			&cli.IntFlag{Name: "top", Value: 5, Usage: "hits taken from each of search and similar per query"},
+			&cli.IntFlag{Name: "hops", Value: 1, Usage: "link-expansion depth from the seeds (2 already returns a tenth of a big brain)"},
+			&cli.IntFlag{Name: "bodies", Value: 5, Usage: "print the full body of this many top-ranked notes (0 = summaries only)"},
+			&cli.BoolFlag{Name: "json"},
+		),
+		Action: func(_ context.Context, cmd *cli.Command) error {
+			sc, err := resolveScope(cmd)
+			if err != nil {
+				return err
+			}
+			var queries []string
+			for _, q := range cmd.Args().Slice() {
+				if q = strings.TrimSpace(q); q != "" {
+					queries = append(queries, q)
+				}
+			}
+			if len(queries) == 0 {
+				return errors.New(`usage: multi explore "<query>" ["<query>" ...]`)
+			}
+			opt := brain.ExploreOptions{Top: int(cmd.Int("top")), Hops: int(cmd.Int("hops"))}
+			byName := map[string]ScopedBrain{}
+			var hits []brain.ExploreHit
+			for _, sb := range sc.Sources {
+				byName[sb.Name] = sb
+				got, err := sb.Explore(queries, opt)
+				if err != nil {
+					return fmt.Errorf("%s: %w", sb.Name, err)
+				}
+				for i := range got {
+					got[i].Brain = sb.Name
+				}
+				hits = append(hits, got...)
+			}
+			brain.SortExplore(hits)
+			// A MOC body is a link list, not knowledge: it never takes a body slot.
+			var withBody []int
+			for i := range hits {
+				if len(withBody) == int(cmd.Int("bodies")) {
+					break
+				}
+				if hits[i].Type == "moc" {
+					continue
+				}
+				n, err := byName[hits[i].Brain].Load(hits[i].Path)
+				if err != nil {
+					return err
+				}
+				hits[i].Body = n.Body
+				withBody = append(withBody, i)
+			}
+			bodies := len(withBody)
+			if cmd.Bool("json") {
+				return printJSON(hits)
+			}
+			if len(hits) == 0 {
+				fmt.Println("(nothing found: try fewer or different terms per query)")
+				return nil
+			}
+			seeds, linked := 0, 0
+			for _, h := range hits {
+				if h.Hop == 0 {
+					seeds++
+				} else {
+					linked++
+				}
+			}
+			fmt.Printf("# explore: %s\n", strings.Join(queries, " | "))
+			fmt.Printf("# %d seeds, %d linked (%d hop), bodies of the top %d\n", seeds, linked, opt.Hops, bodies)
+			line := func(h brain.ExploreHit) {
+				s := h.Summary
+				if s == "" {
+					s = "(no summary)"
+				}
+				if sc.multiSource() {
+					fmt.Printf("- %s:%s | %s\n", h.Brain, h.Path, s)
+				} else {
+					fmt.Printf("- %s | %s\n", h.Path, s)
+				}
+			}
+			fmt.Println("\n## seeds")
+			for _, h := range hits {
+				if h.Hop == 0 {
+					line(h)
+				}
+			}
+			if linked > 0 {
+				fmt.Println("\n## linked")
+				for _, h := range hits {
+					if h.Hop > 0 {
+						line(h)
+					}
+				}
+			}
+			for _, i := range withBody {
+				fmt.Printf("\n## body: %s\n\n%s", hits[i].Path, hits[i].Body)
+				if !strings.HasSuffix(hits[i].Body, "\n") {
+					fmt.Println()
+				}
+			}
+			return nil
+		},
+	}
 }

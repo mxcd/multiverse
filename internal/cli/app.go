@@ -46,6 +46,7 @@ func NewApp(version string) *cli.Command {
 			searchCmd(),
 			findCmd(),
 			similarCmd(),
+			exploreCmd(),
 			linksCmd(),
 			backlinksCmd(),
 			orphansCmd(),

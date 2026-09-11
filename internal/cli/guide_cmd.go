@@ -26,12 +26,12 @@ func guideCmd() *cli.Command {
 	}
 }
 
-const guideText = `multi — a git-backed markdown second brain. You read from and write to "brains"
+const guideText = `multi - a git-backed markdown second brain. You read from and write to "brains"
 (git repos of markdown notes). Git transport is hidden; you never run git yourself.
 
 MENTAL MODEL
 - A brain is a directory of markdown notes under git. Every note has YAML front
-  matter; its one-line ` + "`summary`" + ` is the gate — judge relevance by the summary
+  matter; its one-line ` + "`summary`" + ` is the gate - judge relevance by the summary
   before reading a body.
 - The directory you work in is bound (via ./.multi.yaml, walked up like .git) to
   SOURCES (brains you read) and TARGETS (brains you write). Reads span all sources;
@@ -47,6 +47,8 @@ CORE LOOP
            multi find --type reference --tag <tag>
            multi similar "<query>"          semantic: matches meaning, not words (needs one reindex)
            multi similar --note "<note>"    nearest neighbors: dedup & related notes
+  task     multi explore "<q1>" "<q2>" ...  one call per task: search+similar per query, 1 hop along links,
+                                            ranked summaries + top bodies (--bodies N, --hops, --top)
   read     multi summary "<note>"           the one-line gate
            multi read "<note>"              the deliberate full body read
            multi fm "<note>"                full front matter
@@ -60,18 +62,30 @@ CORE LOOP
   fix      multi fix                        rename files+dirs to kebab-case & rewrite links (--dry-run)
   index    multi reindex                    refresh the semantic shadow index (incremental, disposable)
 
+TASK RETRIEVAL (one call instead of a search loop)
+- Starting a task that needs planning or coding? Run explore once:
+    multi explore "<q1>" "<q2>" "<q3>" [--bodies 5] [--hops 1] [--top 5] [--json]
+  Each query goes through search and similar; the top hits seed one hop along
+  [[wikilinks]] (MOCs and hubs are reached, never expanded). Output: every hit as a
+  ` + "`path | summary`" + ` line (seeds, then linked), then the bodies of the best seeds.
+- Give 3-5 short queries naming the technologies, projects and the verb of the task.
+  More queries beat deeper hops (--hops 2 returns a tenth of a big brain); one
+  off-topic query seeds off-topic notes.
+- Read the summaries, then ` + "`multi read`" + ` whatever else looks relevant. --bodies 0 prints
+  summaries only. Without a shadow index, explore runs on search alone.
+
 WRITE CONTRACT (enforced)
 - --summary is REQUIRED: one line, about the note's contents (not its title).
 - type: moc|reference|decision|hub|meta (default reference); status: active|draft|deprecated.
-  A brain with a closed taxonomy (.multi/brain.yaml) rejects values outside it — the
+  A brain with a closed taxonomy (.multi/brain.yaml) rejects values outside it - the
   error lists what's allowed.
 - A write that looks like a near-duplicate of an existing note prints a warning with
-  candidates — prefer ` + "`multi append`" + ` to writing the same fact under a new name.
+  candidates - prefer ` + "`multi append`" + ` to writing the same fact under a new name.
 - Content notes should carry their split tag plus source/retrieved/freshness; ` + "`multi lint`" + ` checks.
 - created/retrieved are auto-filled; every write auto-commits.
 - Filenames are forced to kebab-case (lowercase-with-hyphens) for cross-platform safety:
   --title "Formula Student" lands at .../formula-student.md, while the in-note H1 stays human.
-  Reference notes by name in any case ("Formula Student" or "formula-student") — both resolve.
+  Reference notes by name in any case ("Formula Student" or "formula-student") - both resolve.
 
 AGENT TIPS
 - Add --json to list / search / find for structured output.
@@ -83,12 +97,17 @@ AGENT TIPS
 const guideClaudeMD = `## Knowledge base: ` + "`multi`" + `
 
 This project is bound to one or more ` + "`multi`" + ` brains (git-backed markdown second brains).
-Search/read the brain before answering; capture durable findings as notes. You never run git —
+Search/read the brain before answering; capture durable findings as notes. You never run git -
 ` + "`multi`" + ` handles commit/sync.
 
-- Session start: ` + "`multi wake-up`" + ` (identity notes + pinned facts — run it first).
+- Session start: ` + "`multi wake-up`" + ` (identity notes + pinned facts - run it first).
 - Discover scope: ` + "`multi scope`" + ` (shows sources = read, targets = write).
-- Find:  ` + "`multi search \"<terms>\" --json`" + ` (ranked, ALL terms must match) · ` + "`multi similar \"<query>\"`" + ` (semantic) · ` + "`multi list --json`" + ` · ` + "`multi find --type reference --tag <tag> --json`" + `
+- Task start (planning or coding): ` + "`multi explore \"<q1>\" \"<q2>\" \"<q3>\"`" + ` - one call that runs search + similar
+  per query, follows one hop of [[wikilinks]] (hubs are listed, not expanded), and prints ranked
+  ` + "`path | summary`" + ` lines plus the bodies of the top 5 seeds (` + "`--bodies N`" + `, ` + "`0`" + ` = summaries only).
+  Give 3-5 short queries: technologies, project names, the verb of the task. More queries beat
+  deeper hops. Then ` + "`multi read`" + ` anything else that looks relevant.
+- Single lookups: ` + "`multi search \"<terms>\" --json`" + ` (ranked, ALL terms must match) · ` + "`multi similar \"<query>\"`" + ` (semantic) · ` + "`multi list --json`" + ` · ` + "`multi find --type reference --tag <tag> --json`" + `
 - Read:  ` + "`multi summary \"<note>\"`" + ` (the one-line gate) · ` + "`multi read \"<note>\"`" + ` (full body)
 - Write (auto-committed; ` + "`--summary`" + ` is REQUIRED, one line about contents):
   ` + "`multi write --title \"<t>\" --summary \"<one line>\" --tags <tag> --source \"<where>\" --freshness \"<currency>\" --body \"<md>\"`" + `

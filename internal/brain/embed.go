@@ -187,15 +187,35 @@ func (b *Brain) Reindex(force bool, progress func(string)) (ReindexStats, error)
 // structure would ever pay for. Scores are cosine similarity scaled by
 // statusWeight, so deprecated knowledge ranks below what superseded it.
 func (b *Brain) Similar(query string, topK int) ([]NoteInfo, error) {
+	lists, err := b.similarAll([]string{query}, topK)
+	if err != nil {
+		return nil, err
+	}
+	return lists[0], nil
+}
+
+// similarAll runs Similar for several queries with a single embedding call:
+// one HTTP round trip is the whole cost of a query at vault scale.
+func (b *Brain) similarAll(queries []string, topK int) ([][]NoteInfo, error) {
 	es := b.Settings.Embeddings
 	if es == nil {
 		return nil, ErrNoEmbeddings
 	}
-	vecs, err := es.embed([]string{es.QueryPrefix + query})
+	texts := make([]string, len(queries))
+	for i, q := range queries {
+		texts[i] = es.QueryPrefix + q
+	}
+	vecs, err := es.embed(texts)
 	if err != nil {
 		return nil, err
 	}
-	return b.nearest(normalize(vecs[0]), topK, "", true)
+	out := make([][]NoteInfo, len(queries))
+	for i, v := range vecs {
+		if out[i], err = b.nearest(normalize(v), topK, "", true); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
 }
 
 // SimilarNote returns the topK nearest neighbors of an already-indexed note —

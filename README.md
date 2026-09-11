@@ -127,6 +127,7 @@ multi search "vue websocket" [--body]  # ranked: ALL terms must match; path > ta
 multi find --type reference --tag projects --status active
 multi similar "reconnect strategy" # semantic search over the shadow index (see below)
 multi similar --note "Some Note"    # nearest neighbors of an existing note
+multi explore "q1" "q2" "q3"       # one call per task: search+similar per query, 1 hop along links, summaries + top bodies (see below)
 multi read "Project Overview"       # the deliberate full read
 multi links / backlinks "..." / orphans
 
@@ -243,6 +244,37 @@ multi similar --note "Some Pattern" # near-duplicate / related-note hunting
 Without an `embeddings:` block, `similar`/`reindex` simply say so and everything
 else works unchanged. `multi write` also warns lexically (token overlap, no
 network needed) when a new note looks like a near-duplicate of an existing one.
+
+## Explore - one call per task
+
+`multi explore` is the retrieval an agent runs once at the start of a task,
+instead of a loop of search / similar / read calls:
+
+```bash
+multi explore "vue websocket" "reconnect strategy" "hub realtime" --bodies 5
+```
+
+Every query goes through `search` and, when a shadow index exists, `similar`.
+The top hits of every list fuse by reciprocal rank into **seeds**; the seeds'
+outgoing `[[wikilinks]]` are followed for `--hops` (default 1). MOCs and any
+note with more than 30 outgoing links count as hubs: they are reached, listed,
+and never expanded. Seeds always rank above linked notes; a linked note takes
+half of its best parent's score, scaled by the same status/pin/type weights
+as `search`.
+
+The output is plain text for the calling model: every hit as a `path | summary`
+line (seeds, then linked), followed by the full bodies of the `--bodies` best
+seeds (default 5, `0` for summaries only; MOC bodies are skipped because they
+are link lists, not knowledge). `--json` returns the same hits with `hop`,
+`score` and `body` fields; `--top` sets how many hits each list contributes
+per query (default 5).
+
+Measured on a 3,800-note brain: five queries return about 100 summaries plus
+5 bodies in 3-4 s warm (the first call after idle pays the embedding model's
+load time). More queries beat deeper hops: `--hops 2` already returns a tenth
+of the brain. Give 3-5 short queries that name the technologies, projects and
+the verb of the task; one off-topic query seeds off-topic notes. Without an
+`embeddings:` block, explore runs on `search` alone.
 
 ## Large files
 
