@@ -88,12 +88,17 @@ WRITE CONTRACT (enforced)
   Reference notes by name in any case ("Formula Student" or "formula-student") - both resolve.
 
 OTHER REPOSITORIES (per-machine checkouts, never synced)
-  path     multi repo path <id>             absolute path only; non-zero exit when unknown or gone
-  add      multi repo add <id> [path]       path defaults to the cwd, stored as the git toplevel
-  list     multi repo list · multi repo rm <id>
-- Resolve other repositories with ` + "`multi repo path <id>`" + `; never guess a checkout path.
-  If the id is not registered, ask the user for the path and persist it with
-  ` + "`multi repo add <id> <path>`" + `.
+  path     multi repo path <id|alias>       absolute path only; non-zero exit when unknown or gone
+  add      multi repo add [path] [--alias <a>]
+                                            path defaults to the cwd; prints the id derived from origin
+  alias    multi repo alias <id|alias> <a>... · multi repo unalias <a>...
+  list     multi repo list · multi repo rm <id|alias>
+- Resolve other repositories with ` + "`multi repo path <id|alias>`" + `; never guess a checkout
+  path. If it is not registered, ask the user for the local checkout path and
+  register it with ` + "`multi repo add <path>`" + `.
+- An id is the platform prefix plus the repo path of the origin remote, lowercased
+  (github/mxcd/multiverse); prefixes come from ` + "`platforms:`" + ` in the registry. Aliases
+  are kebab-case and unique: never an id or another repo's alias.
 
 AGENT TIPS
 - Add --json to list / search / find for structured output.
@@ -121,8 +126,8 @@ Search/read the brain before answering; capture durable findings as notes. You n
   ` + "`multi write --title \"<t>\" --summary \"<one line>\" --tags <tag> --source \"<where>\" --freshness \"<currency>\" --body \"<md>\"`" + `
 - Append to a note: ` + "`multi append \"<note>\" --content \"<md>\"`" + `
 - Sync everything in scope: ` + "`multi sync`" + `
-- Resolve other repositories with ` + "`multi repo path <id>`" + `; never guess a checkout path. If the id is not
-  registered, ask the user for the path and persist it with ` + "`multi repo add <id> <path>`" + `.
+- Resolve other repositories with ` + "`multi repo path <id|alias>`" + `; never guess a checkout path. If it is not
+  registered, ask the user for the local checkout path and register it with ` + "`multi repo add <path>`" + `.
 
 Conventions: judge relevance by ` + "`summary`" + ` before reading bodies; one fact per file; never co-edit
 a shared note; a name in multiple brains is qualified as ` + "`brain:note`" + `.

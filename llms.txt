@@ -173,19 +173,27 @@ writes go to the target. Qualify a note that exists in several brains as
 
 ## Other repositories by id
 
-Resolve other repositories with `multi repo path <id>`; never guess a checkout
-path. If the id is not registered, ask the user for the path and persist it
-with `multi repo add <id> <path>`.
+Resolve other repositories with `multi repo path <id|alias>`; never guess a
+checkout path. If it is not registered, ask the user for the local checkout
+path and register it with `multi repo add <path>`.
 
 ```bash
-multi repo path <id>                # prints only the absolute path; non-zero exit when unknown or gone
-multi repo add <id> [path]          # path defaults to the cwd, stored as the git toplevel; ids are kebab-case, optionally namespaced (mbag/cluster-csi)
-multi repo list                     # id, path, origin remote (inferred live, credentials stripped)
-multi repo rm <id>                  # unregister; the checkout is left alone
+multi repo path <id|alias>          # prints only the absolute path; non-zero exit when unknown or gone
+multi repo add [path] [--alias <a>] # path defaults to the cwd, stored as the git toplevel; prints the derived id
+multi repo alias <id|alias> <a>...  # add aliases; multi repo unalias <a>... removes them
+multi repo list                     # id, aliases, path, origin remote (inferred live, credentials stripped)
+multi repo rm <id|alias>            # unregister the repo and its aliases; the checkout is left alone
 ```
 
-The registry is a plain `repos:` map (id -> path) in the user's
-`~/.config/multi/config.yaml`, so paths differ per machine and are never
+A repo id is derived from the checkout's `origin` remote, never typed: a
+platform prefix plus the full repo path, lowercased, so it is the same on every
+machine (`git@github.com:mxcd/multiverse.git` -> `github/mxcd/multiverse`). The
+prefix comes from the `platforms:` map (host -> prefix); an unmapped host is its
+own prefix. Aliases are user-chosen kebab-case names (`multi`); an alias never
+equals an id or another repo's alias, and a conflicting write fails.
+
+The registry (`platforms:`, and `repos:` as id -> path + aliases) lives in the
+user's `~/.config/multi/config.yaml`, so paths differ per machine and are never
 committed. Repos never join a scope: `sync` / `status` / `lint` / `reindex`
 leave them alone.
 

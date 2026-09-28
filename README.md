@@ -104,34 +104,63 @@ brain in the registry.
 ## Repo registry - other checkouts by id
 
 A shared repo (an ops repo, say) can refer to other repositories by id, e.g.
-`cluster-csi`. Each machine resolves that id to its own local checkout through
-the user-level registry, so no checkout path is ever committed:
+`mbag/wilde-it/cluster-csi`. The id is derived from the checkout's `origin`
+remote, so it is the same on every machine, and each machine resolves it to its
+own local checkout through the user-level registry, so no checkout path is ever
+committed:
 
 ```bash
-multi repo add cluster-csi ~/src/cluster-csi   # path defaults to the cwd; stored as the git toplevel
-multi repo path cluster-csi                    # prints only the path: cd "$(multi repo path cluster-csi)"
-multi repo list                                # id, path, origin remote (inferred live)
-multi repo rm cluster-csi                      # unregister; the checkout is left alone
+multi repo add ~/src/cluster-csi --alias csi   # path defaults to the cwd; prints the derived id
+multi repo path csi                            # id or alias; prints only the path: cd "$(multi repo path csi)"
+multi repo alias csi cluster-csi               # add aliases to a repo (named by id or alias)
+multi repo unalias cluster-csi                 # remove aliases
+multi repo list                                # id, aliases, path, origin remote (inferred live)
+multi repo rm csi                              # unregister the repo and its aliases; the checkout is left alone
 ```
 
+A repo id is a platform prefix plus the full repo path:
+`git@mercedes-benz.ghe.com:wilde-it/cluster-csi.git` becomes
+`mbag/wilde-it/cluster-csi`, `https://git.fsintra.net/apps/intranet.git`
+becomes `fsus-gitlab/apps/intranet`. `ssh://`, scp-style (`git@host:path`) and
+`http(s)://` remotes are understood; credentials, port and a trailing `.git`
+are dropped and the whole id is lowercased, so every clone of a repo gets the
+same id. The prefix comes from the hand-edited `platforms` map (lowercase host
+-> prefix); a host without an entry is its own prefix
+(`gitlab.example.com/group/repo`). A checkout without an origin remote cannot
+be registered.
+
+Aliases are short lowercase kebab-case names of your choice, e.g. `multi` for
+`github/mxcd/multiverse`. Every name in the registry is unique: an alias never
+equals an id or another repo's alias, and a write that would break this fails,
+naming the conflicting entry, without changing the registry. Re-adding a
+checkout updates its path and merges any new aliases.
+
 `~/.config/multi/config.yaml` (`$MULTI_CONFIG_DIR/config.yaml` when set) keeps
-them as a plain `repos` map next to the brains:
+both maps next to the brains:
 
 ```yaml
 brains:
   - name: work
     path: /Users/me/vaults/work
+platforms:
+  mercedes-benz.ghe.com: mbag
+  gitlab.wilde-it.com: wit
+  git.fsintra.net: fsus-gitlab
+  github.com: github
 repos:
-  mbag/cluster-csi: /Users/me/src/cluster-csi
+  github/mxcd/multiverse:
+    path: /Users/me/github.com/mxcd/multiverse
+    aliases: [multi]
 ```
 
 Only the path is stored; `multi repo list` reads the origin remote from the
-checkout, with credentials stripped from http(s) URLs. Ids are lowercase
-kebab-case segments, optionally namespaced with `/` (e.g. `mbag/cluster-csi`),
-and re-adding an id replaces its path.
-`multi repo path` exits non-zero when an id is not registered or its directory
-is gone, and the error tells an agent to ask for the path and run
-`multi repo add`. Repos never join a scope: `sync`, `status`, `lint` and
+checkout, with credentials stripped from http(s) URLs. Entries written by
+v1.6 (`<id>: <path>`) still load and resolve under their old id; to move one to
+its derived id, `multi repo rm <old-id>`, then `multi repo add <path> --alias
+<old-id>`.
+`multi repo path` exits non-zero when an id or alias is not registered or its
+directory is gone, and the error tells an agent to ask for the path and run
+`multi repo add <path>`. Repos never join a scope: `sync`, `status`, `lint` and
 `reindex` leave them alone, and multi runs nothing in them beyond
 `git rev-parse` and `git remote get-url`. `--brain` has no effect on repo
 commands.
