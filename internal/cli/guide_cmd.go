@@ -36,7 +36,10 @@ MENTAL MODEL
 - The directory you work in is bound (via ./.multi.yaml, walked up like .git) to
   SOURCES (brains you read) and TARGETS (brains you write). Reads span all sources;
   writes land in a target.
-- Scope resolution per command: --brain <name|path> overrides everything, else the
+- A brain is registered by name, optionally with aliases (multi brain alias <name> <a>...;
+  multi brain list shows them). An alias resolves wherever a brain name is accepted;
+  whatever multi writes (.multi.yaml, the active brain) stores the name.
+- Scope resolution per command: --brain <name|alias|path> overrides everything, else the
   nearest ./.multi.yaml, else the brain the cwd sits inside, else the active brain.
   Run ` + "`multi scope`" + ` to see what applies here.
 
@@ -115,6 +118,8 @@ Search/read the brain before answering; capture durable findings as notes. You n
 
 - Session start: ` + "`multi wake-up`" + ` (identity notes + pinned facts - run it first).
 - Discover scope: ` + "`multi scope`" + ` (shows sources = read, targets = write).
+- Brains are named by name or alias (` + "`multi brain list`" + ` shows both); an alias resolves wherever a name
+  does, and what ` + "`multi`" + ` writes (` + "`.multi.yaml`" + `, the active brain) stores the name.
 - Task start (planning or coding): ` + "`multi explore \"<q1>\" \"<q2>\" \"<q3>\"`" + ` - one call that runs search + similar
   per query, follows one hop of [[wikilinks]] (hubs are listed, not expanded), and prints ranked
   ` + "`path | summary`" + ` lines plus the bodies of the top 5 seeds (` + "`--bodies N`" + `, ` + "`0`" + ` = summaries only).

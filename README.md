@@ -47,8 +47,9 @@ A Bubble Tea control panel with three tabbed views:
 multi onboard                                   # interactive: new or clone
 multi init ~/vaults/mybrain --name mybrain --split topics,projects
 multi clone git@host:me/brain.git ~/vaults/brain
-multi brain list            # registered brains (* = active)
-multi brain use mybrain     # set active brain
+multi brain add ~/vaults/work --alias w   # register an existing brain directory
+multi brain list            # registered brains with their aliases (* = active)
+multi brain use mybrain     # set active brain (name or alias)
 ```
 
 `init` scaffolds the governance docs (`README`, `read`, `write`, `Conventions`,
@@ -60,6 +61,29 @@ binaries out of git, and a `.gitattributes` with `*.md merge=union` — then
 > directory in your home dir (`~/vaults/<brain>` per brain). It keeps paths
 > predictable, makes backups/sync trivial, and matches the examples throughout
 > this README.
+
+## Brain aliases
+
+A brain can carry extra names: `dt` for `deep-thought`, or `pdb` on a machine
+whose brain is registered as `pdb-brain`, so a committed `.multi.yaml` that
+says `pdb` resolves there too.
+
+```bash
+multi brain add ~/vaults/pdb-brain --alias pdb   # --alias is repeatable or comma-separated
+multi brain alias deep-thought dt                # add aliases to a brain (named by name or alias)
+multi brain unalias dt                           # remove aliases
+```
+
+An alias resolves everywhere a brain name is accepted: `--brain`, `.multi.yaml`
+sources and targets, `multi use` / `scope set`, `brain use`, the active brain
+and the `brain:note` qualifier. Aliases are lookup convenience only: whatever
+multi writes (`active` in the registry, `.multi.yaml` from `use` / `scope set`,
+the TUI) stores the brain's name. So `multi use pdb` on the `pdb-brain` machine
+writes `pdb-brain`; to keep a shared file's `pdb`, edit `.multi.yaml` by hand
+there. Aliases are lowercase kebab-case and unique: an alias never equals a
+brain name or another brain's alias, no brain is registered under an existing
+alias, and a conflicting write fails, naming the owner, without changing the
+registry. Brains and repos are separate namespaces.
 
 ## Per-directory scope (multiple brains)
 
@@ -97,7 +121,7 @@ multi sync                    # syncs every brain in scope
 
 ## Resolution order
 
-Each command resolves its scope as: `--brain <name|path>` (one brain, overrides
+Each command resolves its scope as: `--brain <name|alias|path>` (one brain, overrides
 everything) → nearest `.multi.yaml` → the brain the cwd sits inside → the active
 brain in the registry.
 
@@ -142,6 +166,7 @@ both maps next to the brains:
 brains:
   - name: work
     path: /Users/me/vaults/work
+    aliases: [w]
 platforms:
   mercedes-benz.ghe.com: mbag
   gitlab.wilde-it.com: wit

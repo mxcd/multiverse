@@ -24,7 +24,7 @@ run the binary yet.
 - **Scope.** The directory you work in is bound (via `./.multi.yaml`, walked up
   the tree like `.git`) to SOURCES (brains you read) and TARGETS (brains you
   write). Reads span all sources; writes land in a target.
-- **Resolution order** (per command): `--brain <name|path>` overrides everything
+- **Resolution order** (per command): `--brain <name|alias|path>` overrides everything
   → nearest `./.multi.yaml` → the brain the cwd sits inside → the active brain
   in the registry. The `--brain` flag goes BEFORE the subcommand, like git.
 
@@ -52,8 +52,10 @@ backup/sync trivial, and matches the examples in the docs.
 multi onboard                                          # interactive: new or clone
 multi init ~/vaults/mybrain --name mybrain --split topics,projects
 multi clone git@host:me/brain.git ~/vaults/brain       # adopt an existing brain repo
-multi brain list                                       # registered brains (* = active)
-multi brain use mybrain                                # set the active brain
+multi brain add ~/vaults/work --alias w                # register an existing brain directory
+multi brain list                                       # registered brains with their aliases (* = active)
+multi brain use mybrain                                # set the active brain (name or alias)
+multi brain alias mybrain mb                           # add aliases; multi brain unalias mb removes them
 ```
 
 `init` scaffolds governance docs, `Templates/`, a `.gitignore` (keeps large
@@ -170,6 +172,12 @@ read_only: true             # no write targets at all (overrides targets)
 With a scope active, reads span every source (results labeled by brain) and
 writes go to the target. Qualify a note that exists in several brains as
 `brain:note`, e.g. `multi read personal:"Home"`.
+
+A brain may carry kebab-case aliases (`dt` for `deep-thought`). An alias
+resolves everywhere a brain name is accepted (`--brain`, `.multi.yaml`, `use`,
+`brain use`, the active brain, `brain:note`), but whatever multi writes (the
+active brain, `.multi.yaml` from `use` / `scope set`) stores the brain's name.
+An alias never equals a brain name or another brain's alias.
 
 ## Other repositories by id
 
