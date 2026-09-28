@@ -86,14 +86,20 @@ func scopeCmd() *cli.Command {
 }
 
 // setBinding validates referenced brains, then writes the binding into the cwd.
+// A registered brain is written under its name, never the alias it was given by.
 func setBinding(bnd config.Binding) error {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}
-	for _, ref := range append(append([]string{}, bnd.Sources...), bnd.Targets...) {
-		if _, err := openRef(cfg, ref); err != nil {
-			return err
+	for _, refs := range [][]string{bnd.Sources, bnd.Targets} {
+		for i, ref := range refs {
+			if _, err := openRef(cfg, ref); err != nil {
+				return err
+			}
+			if b := cfg.Find(ref); b != nil {
+				refs[i] = b.Name
+			}
 		}
 	}
 	cwd, err := os.Getwd()

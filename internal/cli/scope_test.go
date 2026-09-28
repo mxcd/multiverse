@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/mxcd/multiverse/internal/brain"
@@ -98,5 +100,68 @@ func TestResolveNoteAcrossBrains(t *testing.T) {
 	// brain:note qualifier disambiguates
 	if sb, _, err := sc.resolveNote("alpha:Shared"); err != nil || sb.Name != "alpha" {
 		t.Fatalf("qualified resolve failed: %v", err)
+	}
+}
+
+func TestBrainAliasesResolveInScope(t *testing.T) {
+	newRegistry(t)
+	if err := runMulti(t, "brain", "add", mkBrain(t, "deep-thought"), "--alias", "dt"); err != nil {
+		t.Fatal(err)
+	}
+	if err := runMulti(t, "brain", "add", mkBrain(t, "pdb-brain"), "--alias", "pdb"); err != nil {
+		t.Fatal(err)
+	}
+
+	// --brain accepts an alias
+	out := captureStdout(t, func() {
+		if err := runMulti(t, "--brain", "pdb", "scope"); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if !strings.Contains(out, "sources: pdb-brain (") {
+		t.Fatalf("--brain pdb should scope pdb-brain, got:\n%s", out)
+	}
+
+	// a committed .multi.yaml naming aliases resolves to the brains
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := config.WriteBinding(dir, config.Binding{Sources: []string{"dt", "pdb"}, Targets: []string{"pdb"}}); err != nil {
+		t.Fatal(err)
+	}
+	out = captureStdout(t, func() {
+		if err := runMulti(t, "scope"); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if !strings.Contains(out, "sources: deep-thought (") || !strings.Contains(out, "targets: pdb-brain\n") {
+		t.Fatalf(".multi.yaml aliases should resolve, got:\n%s", out)
+	}
+
+	// brain:note accepts an alias
+	sc, err := buildScope(loadConfig(t), &config.Binding{Sources: []string{"dt", "pdb"}}, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, sb := range sc.Sources {
+		if _, err := sb.Write(brain.WriteParams{Title: "Shared", Dir: "domain", Summary: "s", Tags: []string{"domain"}, Source: "x", Freshness: "y"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if sb, _, err := sc.resolveNote("pdb:Shared"); err != nil || sb.Name != "pdb-brain" {
+		t.Fatalf("alias-qualified resolve failed: %v", err)
+	}
+
+	// use and scope set write names, never aliases
+	if err := runMulti(t, "use", "dt", "pdb"); err != nil {
+		t.Fatal(err)
+	}
+	if bnd, err := config.ReadBindingAt(dir); err != nil || !slices.Equal(bnd.Sources, []string{"deep-thought", "pdb-brain"}) {
+		t.Fatalf("use should store brain names, got %+v (%v)", bnd, err)
+	}
+	if err := runMulti(t, "scope", "set", "--source", "dt,pdb", "--target", "pdb"); err != nil {
+		t.Fatal(err)
+	}
+	if bnd, err := config.ReadBindingAt(dir); err != nil || !slices.Equal(bnd.Sources, []string{"deep-thought", "pdb-brain"}) || !slices.Equal(bnd.Targets, []string{"pdb-brain"}) {
+		t.Fatalf("scope set should store brain names, got %+v (%v)", bnd, err)
 	}
 }

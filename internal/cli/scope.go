@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/mxcd/multiverse/internal/brain"
@@ -13,7 +14,8 @@ import (
 // ScopedBrain is an opened brain with its display name in the current scope.
 type ScopedBrain struct {
 	*brain.Brain
-	Name string
+	Name    string
+	Aliases []string // registry aliases, also accepted as a brain:note qualifier
 }
 
 // Scope is the set of brains resolved for the current working context: which
@@ -98,14 +100,14 @@ func buildScope(cfg *config.Config, bnd *config.Binding, origin string) (*Scope,
 	return s, nil
 }
 
-// openRef resolves a brain reference (registry name or directory path) to a brain.
+// openRef resolves a brain reference (registry name, alias or directory path) to a brain.
 func openRef(cfg *config.Config, ref string) (ScopedBrain, error) {
 	if entry := cfg.Find(ref); entry != nil {
 		b, err := brain.Open(entry.Path)
 		if err != nil {
 			return ScopedBrain{}, err
 		}
-		return ScopedBrain{Brain: b, Name: entry.Name}, nil
+		return ScopedBrain{Brain: b, Name: entry.Name, Aliases: entry.Aliases}, nil
 	}
 	if isDir(ref) {
 		b, err := brain.Open(ref)
@@ -139,7 +141,7 @@ func (s *Scope) resolveNote(ref string) (ScopedBrain, string, error) {
 	if i := strings.Index(ref, ":"); i > 0 {
 		prefix := ref[:i]
 		for _, sb := range s.Sources {
-			if sb.Name == prefix {
+			if sb.Name == prefix || slices.Contains(sb.Aliases, prefix) {
 				rel, err := sb.Resolve(ref[i+1:])
 				return sb, rel, err
 			}
