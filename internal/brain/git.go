@@ -202,6 +202,16 @@ func InitGit(dir string) error {
 	return err
 }
 
+// GitToplevel returns the absolute root of the git checkout containing dir.
+func GitToplevel(dir string) (string, error) {
+	return runGit(dir, "rev-parse", "--show-toplevel")
+}
+
+// GitOrigin returns the origin remote URL of the checkout at dir.
+func GitOrigin(dir string) (string, error) {
+	return runGit(dir, "remote", "get-url", "origin")
+}
+
 // Clone clones url into dest and returns the absolute destination path.
 func Clone(url, dest string) (string, error) {
 	abs, err := filepath.Abs(dest)

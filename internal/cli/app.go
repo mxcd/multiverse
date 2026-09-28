@@ -34,6 +34,8 @@ func NewApp(version string) *cli.Command {
 			initCmd(),
 			cloneCmd(),
 			brainCmd(),
+			// repository checkouts (never part of scope or sync)
+			repoCmd(),
 			// per-directory scope
 			useCmd(),
 			scopeCmd(),
