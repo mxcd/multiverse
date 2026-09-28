@@ -1,5 +1,6 @@
 // Package config manages the global registry of brains (the user-level index of
-// where each brain lives on disk and which one is currently active).
+// where each brain lives on disk and which one is currently active) and of
+// repository checkouts on this machine.
 package config
 
 import (
@@ -19,6 +20,9 @@ type Brain struct {
 type Config struct {
 	Active string  `yaml:"active,omitempty"`
 	Brains []Brain `yaml:"brains,omitempty"`
+	// Repos maps a repository id to this machine's checkout path. Only the path
+	// is stored; the remote is inferred live from the checkout when needed.
+	Repos map[string]string `yaml:"repos,omitempty"`
 
 	path string `yaml:"-"`
 }
