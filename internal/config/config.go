@@ -16,13 +16,32 @@ type Brain struct {
 	Path string `yaml:"path"`
 }
 
+// Repo is a registry entry pointing at a repository checkout on this machine.
+// Only the path is stored; the remote is inferred live from the checkout.
+type Repo struct {
+	Path    string   `yaml:"path"`
+	Aliases []string `yaml:"aliases,omitempty,flow"`
+}
+
+// UnmarshalYAML also accepts the v1.6 form, a plain path string, so older
+// configs keep loading.
+func (r *Repo) UnmarshalYAML(n *yaml.Node) error {
+	if n.Kind == yaml.ScalarNode {
+		r.Path = n.Value
+		return nil
+	}
+	type plain Repo
+	return n.Decode((*plain)(r))
+}
+
 // Config is the user-level registry, stored at ~/.config/multi/config.yaml.
 type Config struct {
 	Active string  `yaml:"active,omitempty"`
 	Brains []Brain `yaml:"brains,omitempty"`
-	// Repos maps a repository id to this machine's checkout path. Only the path
-	// is stored; the remote is inferred live from the checkout when needed.
-	Repos map[string]string `yaml:"repos,omitempty"`
+	// Platforms maps a git host to the prefix of the repo ids derived from it.
+	Platforms map[string]string `yaml:"platforms,omitempty"`
+	// Repos maps a repository id to this machine's checkout.
+	Repos map[string]Repo `yaml:"repos,omitempty"`
 
 	path string `yaml:"-"`
 }

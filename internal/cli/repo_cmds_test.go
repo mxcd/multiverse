@@ -34,7 +34,7 @@ func mkCheckout(t *testing.T) string {
 	return dir
 }
 
-func loadRepos(t *testing.T) map[string]string {
+func loadRepos(t *testing.T) map[string]config.Repo {
 	t.Helper()
 	cfg, err := config.Load()
 	if err != nil {
@@ -57,7 +57,7 @@ func TestRepoAddResolvesToplevel(t *testing.T) {
 		t.Fatal(err)
 	}
 	repos := loadRepos(t)
-	if repos["explicit"] != root || repos["from-cwd"] != root {
+	if repos["explicit"].Path != root || repos["from-cwd"].Path != root {
 		t.Fatalf("expected both ids at %s, got %+v", root, repos)
 	}
 }
@@ -89,16 +89,16 @@ func TestRepoAddReplaces(t *testing.T) {
 	if err := runMulti(t, "repo", "add", "cluster-csi", second); err != nil {
 		t.Fatal(err)
 	}
-	if repos := loadRepos(t); repos["cluster-csi"] != second || len(repos) != 1 {
+	if repos := loadRepos(t); repos["cluster-csi"].Path != second || len(repos) != 1 {
 		t.Fatalf("re-add should replace the path, got %+v", repos)
 	}
 }
 
 func TestRepoPath(t *testing.T) {
 	root := mkCheckout(t)
-	cfg := &config.Config{Repos: map[string]string{
-		"cluster-csi": root,
-		"gone":        filepath.Join(root, "no-such-dir"),
+	cfg := &config.Config{Repos: map[string]config.Repo{
+		"cluster-csi": {Path: root},
+		"gone":        {Path: filepath.Join(root, "no-such-dir")},
 	}}
 
 	if p, err := repoPath(cfg, "cluster-csi"); err != nil || p != root {
@@ -145,7 +145,7 @@ func TestRepoAddNamespacedID(t *testing.T) {
 	if err := runMulti(t, "repo", "add", "mbag/cluster-csi", root); err != nil {
 		t.Fatal(err)
 	}
-	if loadRepos(t)["mbag/cluster-csi"] != root {
+	if loadRepos(t)["mbag/cluster-csi"].Path != root {
 		t.Fatalf("namespaced id not stored, got %+v", loadRepos(t))
 	}
 }

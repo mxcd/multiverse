@@ -53,10 +53,12 @@ func repoCmd() *cli.Command {
 						return err
 					}
 					if cfg.Repos == nil {
-						cfg.Repos = map[string]string{}
+						cfg.Repos = map[string]config.Repo{}
 					}
-					old, known := cfg.Repos[id]
-					cfg.Repos[id] = top
+					r, known := cfg.Repos[id]
+					old := r.Path
+					r.Path = top
+					cfg.Repos[id] = r
 					if err := cfg.Save(); err != nil {
 						return err
 					}
@@ -103,7 +105,7 @@ func repoCmd() *cli.Command {
 						return nil
 					}
 					for _, id := range slices.Sorted(maps.Keys(cfg.Repos)) {
-						p := cfg.Repos[id]
+						p := cfg.Repos[id].Path
 						origin := "(missing)"
 						if isDir(p) {
 							origin = "(no origin)"
@@ -144,7 +146,8 @@ func repoCmd() *cli.Command {
 // repoPath resolves a repo id to its registered checkout. Its errors tell an
 // agent what to do instead of guessing a path.
 func repoPath(cfg *config.Config, id string) (string, error) {
-	p, ok := cfg.Repos[id]
+	r, ok := cfg.Repos[id]
+	p := r.Path
 	if !ok {
 		return "", fmt.Errorf("repo %q is not registered on this machine - ask the user for the local checkout path, then run: multi repo add %s <path>", id, id)
 	}
