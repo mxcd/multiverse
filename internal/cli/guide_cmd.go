@@ -87,6 +87,14 @@ WRITE CONTRACT (enforced)
   --title "Formula Student" lands at .../formula-student.md, while the in-note H1 stays human.
   Reference notes by name in any case ("Formula Student" or "formula-student") - both resolve.
 
+OTHER REPOSITORIES (per-machine checkouts, never synced)
+  path     multi repo path <id>             absolute path only; non-zero exit when unknown or gone
+  add      multi repo add <id> [path]       path defaults to the cwd, stored as the git toplevel
+  list     multi repo list · multi repo rm <id>
+- Resolve other repositories with ` + "`multi repo path <id>`" + `; never guess a checkout path.
+  If the id is not registered, ask the user for the path and persist it with
+  ` + "`multi repo add <id> <path>`" + `.
+
 AGENT TIPS
 - Add --json to list / search / find for structured output.
 - A note that exists in several brains: qualify it, e.g. ` + "`multi read personal:\"Home\"`" + `.
@@ -113,6 +121,8 @@ Search/read the brain before answering; capture durable findings as notes. You n
   ` + "`multi write --title \"<t>\" --summary \"<one line>\" --tags <tag> --source \"<where>\" --freshness \"<currency>\" --body \"<md>\"`" + `
 - Append to a note: ` + "`multi append \"<note>\" --content \"<md>\"`" + `
 - Sync everything in scope: ` + "`multi sync`" + `
+- Resolve other repositories with ` + "`multi repo path <id>`" + `; never guess a checkout path. If the id is not
+  registered, ask the user for the path and persist it with ` + "`multi repo add <id> <path>`" + `.
 
 Conventions: judge relevance by ` + "`summary`" + ` before reading bodies; one fact per file; never co-edit
 a shared note; a name in multiple brains is qualified as ` + "`brain:note`" + `.

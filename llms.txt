@@ -171,6 +171,24 @@ With a scope active, reads span every source (results labeled by brain) and
 writes go to the target. Qualify a note that exists in several brains as
 `brain:note`, e.g. `multi read personal:"Home"`.
 
+## Other repositories by id
+
+Resolve other repositories with `multi repo path <id>`; never guess a checkout
+path. If the id is not registered, ask the user for the path and persist it
+with `multi repo add <id> <path>`.
+
+```bash
+multi repo path <id>                # prints only the absolute path; non-zero exit when unknown or gone
+multi repo add <id> [path]          # path defaults to the cwd, stored as the git toplevel; ids are kebab-case
+multi repo list                     # id, path, origin remote (inferred live)
+multi repo rm <id>                  # unregister; the checkout is left alone
+```
+
+The registry is a plain `repos:` map (id -> path) in the user's
+`~/.config/multi/config.yaml`, so paths differ per machine and are never
+committed. Repos never join a scope: `sync` / `status` / `lint` / `reindex`
+leave them alone.
+
 ## Optional: session-end ingester
 
 `ingester` is a companion binary that runs on Claude Code's Stop hook and weaves

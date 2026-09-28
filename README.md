@@ -101,6 +101,39 @@ Each command resolves its scope as: `--brain <name|path>` (one brain, overrides
 everything) → nearest `.multi.yaml` → the brain the cwd sits inside → the active
 brain in the registry.
 
+## Repo registry - other checkouts by id
+
+A shared repo (an ops repo, say) can refer to other repositories by id, e.g.
+`cluster-csi`. Each machine resolves that id to its own local checkout through
+the user-level registry, so no checkout path is ever committed:
+
+```bash
+multi repo add cluster-csi ~/src/cluster-csi   # path defaults to the cwd; stored as the git toplevel
+multi repo path cluster-csi                    # prints only the path: cd "$(multi repo path cluster-csi)"
+multi repo list                                # id, path, origin remote (inferred live)
+multi repo rm cluster-csi                      # unregister; the checkout is left alone
+```
+
+`~/.config/multi/config.yaml` (`$MULTI_CONFIG_DIR/config.yaml` when set) keeps
+them as a plain `repos` map next to the brains:
+
+```yaml
+brains:
+  - name: work
+    path: /Users/me/vaults/work
+repos:
+  cluster-csi: /Users/me/src/cluster-csi
+```
+
+Only the path is stored; `multi repo list` reads the origin remote from the
+checkout. Ids are lowercase kebab-case, and re-adding an id replaces its path.
+`multi repo path` exits non-zero when an id is not registered or its directory
+is gone, and the error tells an agent to ask for the path and run
+`multi repo add`. Repos never join a scope: `sync`, `status`, `lint` and
+`reindex` leave them alone, and multi runs nothing in them beyond
+`git rev-parse` and `git remote get-url`. `--brain` has no effect on repo
+commands.
+
 ## For agents / LLMs
 
 `multi` is meant to be driven directly by shell-capable agents (e.g. Claude Code)
@@ -358,7 +391,7 @@ cmd/multi            multi entrypoint
 cmd/ingester         ingester entrypoint (session-end integration)
 internal/brain       Brain, Note/front matter, index/search, graph, lint, git, scaffold
 internal/cli         urfave/cli v3 command tree
-internal/config      ~/.config/multi registry of brains
+internal/config      ~/.config/multi registry of brains and repo checkouts
 internal/ingest      ingester: ledger, transcript delta, tmux steering, dispatcher
 internal/tui         Bubble Tea control panel
 ```
