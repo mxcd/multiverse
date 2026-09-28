@@ -66,7 +66,7 @@ func TestRepoAddRejects(t *testing.T) {
 	t.Setenv("MULTI_CONFIG_DIR", t.TempDir())
 	root := mkCheckout(t)
 
-	for _, id := range []string{"Cluster-CSI", "cluster_csi", "csi-", "a--b", "a/b"} {
+	for _, id := range []string{"Cluster-CSI", "cluster_csi", "csi-", "a--b", "/a", "a/", "a//b", "mbag/Cluster"} {
 		if err := runMulti(t, "repo", "add", id, root); err == nil || !strings.Contains(err.Error(), "kebab-case") {
 			t.Fatalf("id %q: expected kebab-case error, got %v", id, err)
 		}
@@ -135,5 +135,30 @@ func TestRepoRm(t *testing.T) {
 	}
 	if _, err := os.Stat(root); err != nil {
 		t.Fatalf("rm must leave the checkout alone: %v", err)
+	}
+}
+
+func TestRepoAddNamespacedID(t *testing.T) {
+	t.Setenv("MULTI_CONFIG_DIR", t.TempDir())
+	root := mkCheckout(t)
+
+	if err := runMulti(t, "repo", "add", "mbag/cluster-csi", root); err != nil {
+		t.Fatal(err)
+	}
+	if loadRepos(t)["mbag/cluster-csi"] != root {
+		t.Fatalf("namespaced id not stored, got %+v", loadRepos(t))
+	}
+}
+
+func TestRedactURL(t *testing.T) {
+	for in, want := range map[string]string{
+		"https://user:glpat-secret@gitlab.example.com/a/b": "https://gitlab.example.com/a/b",
+		"https://token@github.com/a/b":                     "https://github.com/a/b",
+		"ssh://git@gitlab.example.com/a/b":                 "ssh://git@gitlab.example.com/a/b",
+		"git@github.com:a/b":                               "git@github.com:a/b",
+	} {
+		if got := redactURL(in); got != want {
+			t.Errorf("redactURL(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

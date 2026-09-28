@@ -179,8 +179,8 @@ with `multi repo add <id> <path>`.
 
 ```bash
 multi repo path <id>                # prints only the absolute path; non-zero exit when unknown or gone
-multi repo add <id> [path]          # path defaults to the cwd, stored as the git toplevel; ids are kebab-case
-multi repo list                     # id, path, origin remote (inferred live)
+multi repo add <id> [path]          # path defaults to the cwd, stored as the git toplevel; ids are kebab-case, optionally namespaced (mbag/cluster-csi)
+multi repo list                     # id, path, origin remote (inferred live, credentials stripped)
 multi repo rm <id>                  # unregister; the checkout is left alone
 ```
 

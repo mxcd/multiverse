@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"net/url"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/mxcd/multiverse/internal/brain"
 	"github.com/mxcd/multiverse/internal/config"
@@ -31,8 +33,8 @@ func repoCmd() *cli.Command {
 					if id == "" {
 						return errors.New("usage: multi repo add <id> [path]")
 					}
-					if !brain.IsKebab(id) {
-						return fmt.Errorf("invalid repo id %q: use lowercase kebab-case, e.g. cluster-csi", id)
+					if !validRepoID(id) {
+						return fmt.Errorf("invalid repo id %q: use lowercase kebab-case segments, optionally namespaced with /, e.g. mbag/cluster-csi", id)
 					}
 					path := cmd.Args().Get(1)
 					if path == "" {
@@ -106,7 +108,7 @@ func repoCmd() *cli.Command {
 						if isDir(p) {
 							origin = "(no origin)"
 							if url, err := brain.GitOrigin(p); err == nil {
-								origin = url
+								origin = redactURL(url)
 							}
 						}
 						fmt.Printf("%-20s %s  %s\n", id, p, origin)
@@ -150,4 +152,26 @@ func repoPath(cfg *config.Config, id string) (string, error) {
 		return "", fmt.Errorf("repo %q is registered at %s, but that directory no longer exists - ask the user for the current checkout path, then re-register it: multi repo add %s <path>", id, p, id)
 	}
 	return p, nil
+}
+
+// validRepoID accepts kebab-case segments joined by "/", so ids can carry a
+// namespace (mbag/cluster-csi) without allowing empty or odd segments.
+func validRepoID(id string) bool {
+	for _, seg := range strings.Split(id, "/") {
+		if !brain.IsKebab(seg) {
+			return false
+		}
+	}
+	return true
+}
+
+// redactURL drops the userinfo of an http(s) remote: older checkouts carry
+// access tokens there, and `repo list` output lands in agent context.
+func redactURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || u.User == nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return raw
+	}
+	u.User = nil
+	return u.String()
 }

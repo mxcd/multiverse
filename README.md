@@ -122,11 +122,13 @@ brains:
   - name: work
     path: /Users/me/vaults/work
 repos:
-  cluster-csi: /Users/me/src/cluster-csi
+  mbag/cluster-csi: /Users/me/src/cluster-csi
 ```
 
 Only the path is stored; `multi repo list` reads the origin remote from the
-checkout. Ids are lowercase kebab-case, and re-adding an id replaces its path.
+checkout, with credentials stripped from http(s) URLs. Ids are lowercase
+kebab-case segments, optionally namespaced with `/` (e.g. `mbag/cluster-csi`),
+and re-adding an id replaces its path.
 `multi repo path` exits non-zero when an id is not registered or its directory
 is gone, and the error tells an agent to ask for the path and run
 `multi repo add`. Repos never join a scope: `sync`, `status`, `lint` and
