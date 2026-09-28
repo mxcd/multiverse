@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -346,6 +347,11 @@ func (m Model) commitInput() (tea.Model, tea.Cmd) {
 			m.mode = modeNormal
 			return m, nil
 		}
+		if owner := m.cfg.AliasOwner(val); owner != nil {
+			m.status = fmt.Sprintf("%q is already an alias of %s", val, owner.Name)
+			m.mode = modeNormal
+			return m, nil
+		}
 		m.pendName = val
 		m.mode = modeAddPath
 		m.input.SetValue("")
@@ -378,8 +384,13 @@ func (m Model) commitInput() (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		old := r.name
+		if taken := m.cfg.Find(val); taken != nil && taken.Name != old {
+			m.status = fmt.Sprintf("%q is already taken by %s", val, taken.Name)
+			return m, nil
+		}
 		if e := m.cfg.Find(old); e != nil {
-			e.Name = val
+			e.Name = val // keeps its aliases; renaming to one of them promotes it
+			e.Aliases = slices.DeleteFunc(e.Aliases, func(a string) bool { return a == val })
 		}
 		if m.cfg.Active == old {
 			m.cfg.Active = val
