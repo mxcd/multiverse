@@ -6,14 +6,17 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"slices"
 
 	"gopkg.in/yaml.v3"
 )
 
-// Brain is a registry entry pointing at a brain repository on disk.
+// Brain is a registry entry pointing at a brain repository on disk. Aliases
+// are extra names it resolves by; anything multi writes stores Name.
 type Brain struct {
-	Name string `yaml:"name"`
-	Path string `yaml:"path"`
+	Name    string   `yaml:"name"`
+	Path    string   `yaml:"path"`
+	Aliases []string `yaml:"aliases,omitempty,flow"`
 }
 
 // Repo is a registry entry pointing at a repository checkout on this machine.
@@ -73,6 +76,10 @@ func Load() (*Config, error) {
 	if err := yaml.Unmarshal(data, c); err != nil {
 		return nil, err
 	}
+	// a hand-edited alias in active resolves like a typed one and is saved as the name
+	if ab := c.ActiveBrain(); ab != nil {
+		c.Active = ab.Name
+	}
 	c.path = p
 	return c, nil
 }
@@ -89,19 +96,31 @@ func (c *Config) Save() error {
 	return os.WriteFile(c.path, data, 0o644)
 }
 
-// Find returns the registry entry with the given name, or nil.
+// Find returns the registry entry with the given name or, failing that, alias,
+// or nil. Every brain reference (--brain, .multi.yaml, active) resolves here.
 func (c *Config) Find(name string) *Brain {
 	for i := range c.Brains {
 		if c.Brains[i].Name == name {
 			return &c.Brains[i]
 		}
 	}
+	return c.AliasOwner(name)
+}
+
+// AliasOwner returns the registry entry carrying alias, or nil.
+func (c *Config) AliasOwner(alias string) *Brain {
+	for i := range c.Brains {
+		if slices.Contains(c.Brains[i].Aliases, alias) {
+			return &c.Brains[i]
+		}
+	}
 	return nil
 }
 
-// Add registers a brain, replacing the path of an existing entry with the same name.
+// Add registers a brain, replacing the path of an existing entry with the same
+// name. Callers keep names and aliases apart.
 func (c *Config) Add(b Brain) {
-	if existing := c.Find(b.Name); existing != nil {
+	if existing := c.Find(b.Name); existing != nil && existing.Name == b.Name {
 		existing.Path = b.Path
 		return
 	}

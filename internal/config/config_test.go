@@ -79,3 +79,72 @@ func TestConfigWithoutReposSavesUnchanged(t *testing.T) {
 		t.Fatalf("config changed on save:\n%s", data)
 	}
 }
+
+func TestFindBrainByAlias(t *testing.T) {
+	c := &Config{Brains: []Brain{
+		{Name: "deep-thought", Path: "/vaults/deep-thought", Aliases: []string{"dt"}},
+		{Name: "pdb-brain", Path: "/vaults/pdb-brain", Aliases: []string{"pdb"}},
+	}}
+	for ref, want := range map[string]string{"deep-thought": "deep-thought", "dt": "deep-thought", "pdb": "pdb-brain"} {
+		if b := c.Find(ref); b == nil || b.Name != want {
+			t.Errorf("Find(%q) = %+v, want %s", ref, b, want)
+		}
+	}
+	if c.Find("unknown") != nil || c.AliasOwner("deep-thought") != nil {
+		t.Fatal("a name is not an alias, an unknown ref finds nothing")
+	}
+	// a name wins over an alias (only reachable by hand-editing)
+	c.Brains = append(c.Brains, Brain{Name: "dt", Path: "/vaults/dt"})
+	if b := c.Find("dt"); b.Path != "/vaults/dt" {
+		t.Fatalf("name must win over alias, got %+v", b)
+	}
+	// Add matches names only: an alias never has its brain's path replaced
+	c.Add(Brain{Name: "pdb", Path: "/vaults/pdb"})
+	if c.Find("pdb-brain").Path != "/vaults/pdb-brain" || len(c.Brains) != 4 {
+		t.Fatalf("Add by an alias must not touch its owner: %+v", c.Brains)
+	}
+}
+
+func TestBrainAliasesRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("MULTI_CONFIG_DIR", dir)
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Brains = []Brain{{Name: "deep-thought", Path: "/vaults/deep-thought", Aliases: []string{"dt", "brain"}}, {Name: "alpha", Path: "/vaults/alpha"}}
+	if err := c.Save(); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "config.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "brains:\n    - name: deep-thought\n      path: /vaults/deep-thought\n      aliases: [dt, brain]\n    - name: alpha\n      path: /vaults/alpha\n"
+	if string(data) != want {
+		t.Fatalf("unexpected config:\n%s", data)
+	}
+	got, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(got.Find("dt").Aliases, []string{"dt", "brain"}) || got.Find("alpha").Aliases != nil {
+		t.Fatalf("aliases not round-tripped: %+v", got.Brains)
+	}
+}
+
+func TestActiveAliasLoadsAsName(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("MULTI_CONFIG_DIR", dir)
+	hand := "active: dt\nbrains:\n    - name: deep-thought\n      path: /vaults/deep-thought\n      aliases: [dt]\n"
+	if err := os.WriteFile(filepath.Join(dir, "config.yaml"), []byte(hand), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Active != "deep-thought" || c.ActiveBrain() == nil {
+		t.Fatalf("active alias should load as the brain name, got %q", c.Active)
+	}
+}
