@@ -175,8 +175,9 @@ writes go to the target. Qualify a note that exists in several brains as
 
 A brain may carry kebab-case aliases (`dt` for `deep-thought`). An alias
 resolves everywhere a brain name is accepted (`--brain`, `.multi.yaml`, `use`,
-`brain use`, the active brain, `brain:note`), but whatever multi writes (the
-active brain, `.multi.yaml` from `use` / `scope set`) stores the brain's name.
+`brain use`, the active brain, `brain:note`). `.multi.yaml` stores refs as typed
+(it is shared, each machine resolves by name or alias); the active brain stores
+the real name.
 An alias never equals a brain name or another brain's alias.
 
 ## Other repositories by id

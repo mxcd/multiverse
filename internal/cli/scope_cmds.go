@@ -92,13 +92,12 @@ func setBinding(bnd config.Binding) error {
 	if err != nil {
 		return err
 	}
+	// refs are checked but stored as typed: a committed .multi.yaml names brains
+	// for the whole team, and each machine resolves them by its own name or alias
 	for _, refs := range [][]string{bnd.Sources, bnd.Targets} {
-		for i, ref := range refs {
+		for _, ref := range refs {
 			if _, err := openRef(cfg, ref); err != nil {
 				return err
-			}
-			if b := cfg.Find(ref); b != nil {
-				refs[i] = b.Name
 			}
 		}
 	}

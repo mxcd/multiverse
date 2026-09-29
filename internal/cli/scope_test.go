@@ -151,17 +151,20 @@ func TestBrainAliasesResolveInScope(t *testing.T) {
 		t.Fatalf("alias-qualified resolve failed: %v", err)
 	}
 
-	// use and scope set write names, never aliases
+	// use and scope set store refs as typed: the shared file keeps the team's name
 	if err := runMulti(t, "use", "dt", "pdb"); err != nil {
 		t.Fatal(err)
 	}
-	if bnd, err := config.ReadBindingAt(dir); err != nil || !slices.Equal(bnd.Sources, []string{"deep-thought", "pdb-brain"}) {
-		t.Fatalf("use should store brain names, got %+v (%v)", bnd, err)
+	if bnd, err := config.ReadBindingAt(dir); err != nil || !slices.Equal(bnd.Sources, []string{"dt", "pdb"}) {
+		t.Fatalf("use should store refs as typed, got %+v (%v)", bnd, err)
 	}
 	if err := runMulti(t, "scope", "set", "--source", "dt,pdb", "--target", "pdb"); err != nil {
 		t.Fatal(err)
 	}
-	if bnd, err := config.ReadBindingAt(dir); err != nil || !slices.Equal(bnd.Sources, []string{"deep-thought", "pdb-brain"}) || !slices.Equal(bnd.Targets, []string{"pdb-brain"}) {
-		t.Fatalf("scope set should store brain names, got %+v (%v)", bnd, err)
+	if bnd, err := config.ReadBindingAt(dir); err != nil || !slices.Equal(bnd.Sources, []string{"dt", "pdb"}) || !slices.Equal(bnd.Targets, []string{"pdb"}) {
+		t.Fatalf("scope set should store refs as typed, got %+v (%v)", bnd, err)
+	}
+	if err := runMulti(t, "use", "nope"); err == nil {
+		t.Fatal("use must still reject an unknown ref")
 	}
 }

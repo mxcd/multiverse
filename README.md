@@ -76,11 +76,11 @@ multi brain unalias dt                           # remove aliases
 
 An alias resolves everywhere a brain name is accepted: `--brain`, `.multi.yaml`
 sources and targets, `multi use` / `scope set`, `brain use`, the active brain
-and the `brain:note` qualifier. Aliases are lookup convenience only: whatever
-multi writes (`active` in the registry, `.multi.yaml` from `use` / `scope set`,
-the TUI) stores the brain's name. So `multi use pdb` on the `pdb-brain` machine
-writes `pdb-brain`; to keep a shared file's `pdb`, edit `.multi.yaml` by hand
-there. Aliases are lowercase kebab-case and unique: an alias never equals a
+and the `brain:note` qualifier. `.multi.yaml` stores refs exactly as typed
+(`use` / `scope set` still check they resolve): a committed file names brains
+for the whole team, so `multi use pdb` on a machine where the brain is
+`pdb-brain` with alias `pdb` writes `pdb`, which also works where the brain is
+named `pdb`. The per-machine `active` brain stores the real name. Aliases are lowercase kebab-case and unique: an alias never equals a
 brain name or another brain's alias, no brain is registered under an existing
 alias, and a conflicting write fails, naming the owner, without changing the
 registry. Brains and repos are separate namespaces.
